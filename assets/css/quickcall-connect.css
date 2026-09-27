@@ -1,0 +1,191 @@
+/*
+ * QuickCall Connect - frontend styles.
+ * Vanilla CSS, no frameworks. All visual knobs are CSS custom properties
+ * set by the plugin from validated settings.
+ */
+
+.qc-root {
+	--qc-size: 54px;
+	--qc-gap: 10px;
+	--qc-radius: 18px;
+	--qc-ox: 16px;
+	--qc-oy: 16px;
+	position: fixed;
+	z-index: 99998;
+	box-sizing: border-box;
+}
+
+.qc-root *,
+.qc-root *::before,
+.qc-root *::after {
+	box-sizing: inherit;
+}
+
+.qc-root .qc-icon {
+	width: 1.35em;
+	height: 1.35em;
+	display: block;
+	flex: none;
+}
+
+/* ---------- Floating modes (left / right) ---------- */
+
+.qc-float {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: var(--qc-gap);
+}
+
+.qc-right {
+	right: var(--qc-ox);
+	bottom: var(--qc-oy);
+}
+
+.qc-left {
+	left: var(--qc-ox);
+	bottom: var(--qc-oy);
+}
+
+.qc-left .qc-float {
+	align-items: flex-start;
+}
+
+.qc-toggle {
+	appearance: none;
+	border: 0;
+	cursor: pointer;
+	width: var(--qc-size);
+	height: var(--qc-size);
+	border-radius: var(--qc-radius);
+	background: var(--qc-bg);
+	color: var(--qc-fg);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+	font-size: 24px;
+	padding: 0;
+}
+
+.qc-toggle:hover {
+	filter: brightness(1.08);
+}
+
+.qc-toggle:focus-visible,
+.qc-link:focus-visible {
+	outline: 3px solid var(--qc-accent);
+	outline-offset: 2px;
+}
+
+/* Actions column. Visible by default (no-JS fallback); JS hides until open. */
+.qc-actions {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--qc-gap);
+}
+
+.qc-actions > li {
+	margin: 0;
+	padding: 0;
+}
+
+.qc-js .qc-actions {
+	display: none;
+}
+
+.qc-js.qc-open .qc-actions {
+	display: flex;
+}
+
+.qc-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 44px;
+	min-width: 44px;
+	padding: 8px 14px;
+	border-radius: var(--qc-radius);
+	background: var(--qc-bg);
+	color: var(--qc-fg);
+	text-decoration: none;
+	font-size: 15px;
+	line-height: 1.2;
+	justify-content: center;
+}
+
+.qc-link:hover {
+	filter: brightness(1.08);
+	text-decoration: none;
+	color: var(--qc-fg);
+}
+
+/* ---------- Bottom dock ---------- */
+
+.qc-bottom {
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: var(--qc-bg);
+	padding: calc(var(--qc-gap) / 2) var(--qc-gap);
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+	max-width: 100vw;
+}
+
+.qc-dock-nav .qc-actions {
+	flex-direction: row;
+	flex-wrap: nowrap;
+	justify-content: flex-start;
+	gap: var(--qc-gap);
+	width: max-content;
+	margin: 0 auto;
+}
+
+.qc-dock .qc-link {
+	background: transparent;
+}
+
+/* Keep floating actions inside the viewport: expand upward. */
+.qc-right .qc-float,
+.qc-left .qc-float {
+	max-height: calc(100vh - var(--qc-oy) * 2 - var(--qc-size));
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+
+/* ---------- Animation ---------- */
+
+.qc-root:not(.qc-anim-none) .qc-toggle,
+.qc-root:not(.qc-anim-none) .qc-link {
+	transition: transform 0.15s ease, filter 0.15s ease, opacity 0.15s ease;
+}
+
+.qc-root:not(.qc-anim-none) .qc-toggle:hover {
+	transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.qc-root *,
+	.qc-root *::before,
+	.qc-root *::after {
+		transition: none !important;
+		transform: none !important;
+	}
+}
+
+/* ---------- Small screens ---------- */
+
+@media (max-width: 380px) {
+	.qc-link {
+		padding: 8px 10px;
+		font-size: 14px;
+	}
+
+	.qc-float {
+		max-width: calc(100vw - 2 * var(--qc-ox));
+	}
+}

@@ -1,0 +1,161 @@
+# Copyright (C) 2026 thuexemayhanoi
+# This file is distributed under the GPL-2.0-or-later license.
+msgid ""
+msgstr ""
+"Project-Id-Version: QuickCall Connect 0.1.0\n"
+"Report-Msgid-Bugs-To: https://github.com/thuexemayhanoi/wp-plugin/issues\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-09-27T17:40:00+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: hand-authored\n"
+"X-Domain: quickcall-connect\n"
+
+#: quickcall-connect.php:0
+msgid "QuickCall Connect"
+msgstr ""
+
+#: includes/class-registry.php:0
+msgid "Call"
+msgstr ""
+
+#: includes/class-registry.php:0
+msgid "Zalo"
+msgstr ""
+
+#: includes/class-registry.php:0
+msgid "Map / Directions"
+msgstr ""
+
+#: includes/class-registry.php:0
+msgid "Facebook Page"
+msgstr ""
+
+#: includes/class-registry.php:0
+msgid "Facebook Messenger"
+msgstr ""
+
+#: includes/class-registry.php:0
+msgid "WhatsApp"
+msgstr ""
+
+#: includes/class-registry.php:0
+msgid "TripAdvisor"
+msgstr ""
+
+#: includes/class-registry.php:0
+msgid "YouTube"
+msgstr ""
+
+#: includes/class-registry.php:0
+msgid "TikTok"
+msgstr ""
+
+#: includes/class-registry.php:0
+msgid "Instagram"
+msgstr ""
+
+#: includes/class-registry.php:0
+msgid "X / X.com"
+msgstr ""
+
+#: includes/class-registry.php:0
+msgid "Pinterest"
+msgstr ""
+
+#: includes/class-registry.php:0
+msgid "Reddit"
+msgstr ""
+
+#: includes/class-registry.php:0
+msgid "Email"
+msgstr ""
+
+#: includes/class-registry.php:0
+msgid "SMS"
+msgstr ""
+
+#: includes/class-registry.php:0
+msgid "Telegram"
+msgstr ""
+
+#: includes/class-registry.php:0
+msgid "Chat"
+msgstr ""
+
+#: includes/class-registry.php:0
+msgid "Robot"
+msgstr ""
+
+#: includes/class-registry.php:0
+msgid "Link"
+msgstr ""
+
+#: includes/class-settings.php:0
+msgid "Chat with us"
+msgstr ""
+
+#: admin/class-settings-page.php:0
+msgid "General"
+msgstr ""
+
+#: admin/class-settings-page.php:0
+msgid "Enable widget"
+msgstr ""
+
+#: admin/class-settings-page.php:0
+msgid "Show the contact launcher on your website"
+msgstr ""
+
+#: admin/class-settings-page.php:0
+msgid "Placement"
+msgstr ""
+
+#: admin/class-settings-page.php:0
+msgid "Floating right"
+msgstr ""
+
+#: admin/class-settings-page.php:0
+msgid "Floating left"
+msgstr ""
+
+#: admin/class-settings-page.php:0
+msgid "Bottom dock"
+msgstr ""
+
+#: admin/class-settings-page.php:0
+msgid "Primary Contact"
+msgstr ""
+
+#: admin/class-settings-page.php:0
+msgid "Social & Messaging"
+msgstr ""
+
+#: admin/class-settings-page.php:0
+msgid "Custom Link / Chatbot"
+msgstr ""
+
+#: admin/class-settings-page.php:0
+msgid "Leave a field empty to keep that icon hidden on your website."
+msgstr ""
+
+#: admin/class-settings-page.php:0
+msgid "Appearance"
+msgstr ""
+
+#: public/class-frontend.php:0
+msgid "Quick contact"
+msgstr ""
+
+#: public/class-frontend.php:0
+msgid "Quick contact options"
+msgstr ""
+
+#: public/class-frontend.php:0
+msgid "Open quick contact options"
+msgstr ""
+
+#: public/class-frontend.php:0
+msgid "Close quick contact options"
+msgstr ""

@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: PHP version
+        run: php -v
+
+      - name: Syntax check (PHP 7.4-compatible code)
+        run: |
+          find . -name '*.php' -not -path './tests/*' | while read -r f; do php -l "$f"; done
+
+      - name: JS syntax check
+        run: |
+          if command -v node >/dev/null; then node --check assets/js/quickcall-connect.js; else echo "node not available"; fi
+
+      - name: Behavior tests
+        run: php tests/run-tests.php
