@@ -1,0 +1,13 @@
+/dist/
+/.phpunit.result.cache
+/.phpunit-watcher.yml
+/.env
+/.env.*
+!/.env.example
+/.idea/
+/.vscode/
+/.DS_Store
+/node_modules/
+/vendor/bin/
+/coverage/
+/wp-config.php

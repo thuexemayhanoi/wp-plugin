@@ -1,15 +1,9 @@
 <?php
-/**
- * QuickCall Connect uninstall.
+/** Retain user campaigns, settings and posts on uninstall; explicit cleanup is not provided. *
  *
- * Runs when the plugin is deleted from the Plugins screen. Removes all of
- * this plugin's stored data. Settings are kept on deactivation (so a
- * deactivate/reactivate cycle is lossless) and removed only on deletion.
- *
- * @package QuickCallConnect
+ * @package MultiAISEOContentFactory
  */
 
 defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
-
-// Single-site cleanup. Multisite-wide cleanup is out of scope for v1.
-delete_option( 'quickcall_connect_settings' );
+// Deactivation has already paused and canceled this plugin's jobs.
+// Deliberately preserve all user data, shared Action Scheduler tables and WordPress posts.

@@ -1,25 +1,51 @@
-name: CI
-
+name: CI & Build WordPress ZIP
 on:
   push:
+    branches: [main]
   pull_request:
-
+  workflow_dispatch:
+permissions:
+  contents: read
 jobs:
-  test:
+  lint-and-build:
+    name: PHP ${{ matrix.php }} / smoke / package
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.3']
     steps:
       - uses: actions/checkout@v4
-
-      - name: PHP version
-        run: php -v
-
-      - name: Syntax check (PHP 7.4-compatible code)
+      - name: PHP runtime
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, dom, openssl, zip, simplexml
+          tools: none
+      - name: PHP syntax
+        run: find . -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Quick flow smoke tests (mocks; no paid API calls)
+        run: php tests/smoke-v110.php
+      - name: Build ZIP
+        run: python3 scripts/build_plugin.py
+      - name: Validate WordPress ZIP layout
         run: |
-          find . -name '*.php' -not -path './tests/*' | while read -r f; do php -l "$f"; done
-
-      - name: JS syntax check
-        run: |
-          if command -v node >/dev/null; then node --check assets/js/quickcall-connect.js; else echo "node not available"; fi
-
-      - name: Behavior tests
-        run: php tests/run-tests.php
+          python3 -m zipfile -t dist/multi-ai-seo-content-factory.zip
+          python3 - <<'PYCODE'
+          import zipfile
+          name='dist/multi-ai-seo-content-factory.zip'
+          with zipfile.ZipFile(name) as f:
+              names=f.namelist()
+              assert all(n.startswith('multi-ai-seo-content-factory/') for n in names)
+              assert 'multi-ai-seo-content-factory/multi-ai-seo-content-factory.php' in names
+              assert 'multi-ai-seo-content-factory/vendor/action-scheduler/action-scheduler.php' in names
+          print('Installable archive layout verified')
+          PYCODE
+      - name: Upload installable WordPress ZIP
+        if: matrix.php == '8.3'
+        uses: actions/upload-artifact@v4
+        with:
+          name: multi-ai-seo-content-factory-wordpress-zip
+          path: dist/multi-ai-seo-content-factory.zip
+          if-no-files-found: error
+          retention-days: 30

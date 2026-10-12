@@ -1,0 +1,646 @@
+{
+  "integration": {
+    "environment": {
+      "wordpress": "7.1.3",
+      "php": "8.3.6",
+      "database": "10.11.7-MariaDB-2ubuntu2",
+      "yoast": "28.6",
+      "getgenie_active": true,
+      "action_scheduler": "4.2.0"
+    },
+    "tests": [
+      {
+        "test": "WordPress plugin actually activated",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Action Scheduler available and initialized",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Yoast actually activated",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Encrypted API key roundtrip",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "API key option not autoloaded",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Import five titles",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Import deduplicates five titles",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "UTF-8 CSV BOM delimiter quoted multiline",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Reject invalid CSV encoding",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Actual Excel XLSX sample parsed with Vietnamese Unicode",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Five Excel titles imported into persistent Matrix",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Excel replay skips duplicates",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Legacy XLS rejected with conversion guidance",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Excel formulas rejected without evaluation",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Start schedules genuine Action Scheduler jobs",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Five generated drafts persisted before QA",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Pause prevents processing and preserves checkpoint",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Five QA-passed Draft deliveries",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Yoast title meta saved using real Yoast",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Yoast focus keyword and primary category",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Content has no second H1 or schema shell",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Replay/retry does not create duplicate delivered posts",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "claude catalog model discovery",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "claude adapter response parsing and token usage",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "claude HTTPS allowlist TLS no redirects",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Claude Messages version and max tokens",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "gemini catalog model discovery",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "gemini adapter response parsing and token usage",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "gemini HTTPS allowlist TLS no redirects",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Gemini API key in header and JSON MIME",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "openai catalog model discovery",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "openai adapter response parsing and token usage",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "openai HTTPS allowlist TLS no redirects",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "OpenAI uses Responses store=false JSON format",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Dangerous script/duplicate H1 fails technical QA",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "AI dynamic shortcode cannot pass publication QA",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Invented price rejected",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Missing facts block delivery",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Unapproved external source rejected without request",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Unsafe link protocol rejected",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Word limit and insufficient structure fail QA",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Keyword stuffing detected",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Vietnamese Unicode word units",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Existing published internal link resolves and satisfies target",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Broken local link blocks publication",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "pending actual WordPress status",
+        "pass": true,
+        "detail": "pending / "
+      },
+      {
+        "test": "publish actual WordPress status",
+        "pass": true,
+        "detail": "publish / "
+      },
+      {
+        "test": "Published immutable on retry/resume",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "schedule actual WordPress status",
+        "pass": true,
+        "detail": "future / "
+      },
+      {
+        "test": "Native WordPress schedule event exists",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Scheduled publication reconciles Matrix",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Cannot start auto-publish without explicit opt-in",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Writer A reviewer B functional pipeline",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "QA failure transitions into bounded REPAIR with reasons",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Repair provider B actually called and returned to QA",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Repair passes QA and delivers one Draft",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Exhausted QA retains Draft and BLOCKED without publishing",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Retry Failed resets only blocked checkpoint and pauses",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Primary authentication failure can use configured fallback",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Daily article limit prevents next API request",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "429 bounded retry with Retry-After backoff",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Retry resumes request into QA",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Timeout conservatively reserves budget instead of double posting",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Truncated response rejected but actual usage retained",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Budget reserve blocks API before request",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Atomic lease excludes second worker",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Fencing prevents stale lock release",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Correct lease releases for next worker",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Stalled worker lease recovers without losing identity",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Stale worker cannot overwrite checkpoint",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Crash gap recovers the existing bootstrap post without insertion",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Repeated 429 stops after the configured retry bound",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Manual batch completes exactly five then pauses",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Provider admin never prints full API keys",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Admin screen renders: masf",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Admin screen renders: masf-campaigns",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Admin screen renders: masf-matrix",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Admin screen renders: masf-queue",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Admin screen renders: masf-qa",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Admin screen renders: masf-schedule",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Admin screen renders: masf-providers",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Admin screen renders: masf-settings",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Admin screen renders: masf-logs",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Anonymous REST access denied",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Subscriber denied factory capability",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Deactivation disables work without deleting posts/settings/data",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Reactivation keeps checkpoint and resumes only after explicit Start",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Real Action Scheduler runner executes writer callback without Dashboard",
+        "pass": true,
+        "detail": ""
+      }
+    ],
+    "passed": 88,
+    "failed": 0,
+    "live_api_calls": 0
+  },
+  "http_admin": {
+    "checks": [
+      {
+        "test": "HTTP administrator accesses Vietnamese campaign page",
+        "pass": true
+      },
+      {
+        "test": "HTTP campaign create with valid nonce persists",
+        "pass": true
+      },
+      {
+        "test": "Actual HTTP uploaded Excel is accepted and deduplicated",
+        "pass": true
+      },
+      {
+        "test": "HTTP text import creates two rows",
+        "pass": true
+      },
+      {
+        "test": "Imported articles visible in HTTP Matrix",
+        "pass": true
+      },
+      {
+        "test": "HTTP forged CSRF nonce rejected",
+        "pass": true
+      },
+      {
+        "test": "Provider HTML contains empty password fields and no stored keys",
+        "pass": true
+      },
+      {
+        "test": "All API password values remain empty",
+        "pass": true
+      },
+      {
+        "test": "Authenticated HTTP REST with WP nonce works",
+        "pass": true
+      },
+      {
+        "test": "Anonymous HTTP REST denied",
+        "pass": true
+      },
+      {
+        "test": "CSV download content and headers valid",
+        "pass": true
+      },
+      {
+        "test": "JSON report downloads without API keys",
+        "pass": true
+      },
+      {
+        "test": "Real HTTP admin screen masf",
+        "pass": true
+      },
+      {
+        "test": "Real HTTP admin screen masf-campaigns",
+        "pass": true
+      },
+      {
+        "test": "Real HTTP admin screen masf-matrix",
+        "pass": true
+      },
+      {
+        "test": "Real HTTP admin screen masf-queue",
+        "pass": true
+      },
+      {
+        "test": "Real HTTP admin screen masf-qa",
+        "pass": true
+      },
+      {
+        "test": "Real HTTP admin screen masf-schedule",
+        "pass": true
+      },
+      {
+        "test": "Real HTTP admin screen masf-providers",
+        "pass": true
+      },
+      {
+        "test": "Real HTTP admin screen masf-settings",
+        "pass": true
+      },
+      {
+        "test": "Real HTTP admin screen masf-logs",
+        "pass": true
+      }
+    ],
+    "passed": 21,
+    "failed": 0
+  },
+  "browser": {
+    "checks": [
+      {
+        "test": "Administrator can access Vietnamese campaign screen",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Create campaign through real nonce-protected form",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Actual HTTP Excel upload accepted and duplicate rows reported",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Text titles imported through admin form",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "UI Matrix displays imported titles",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Authenticated REST nonce authorizes dashboard metrics",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Forged admin form nonce blocked",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Provider password values remain empty",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "No saved API keys in provider HTML",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "Responsive form at 390px",
+        "pass": true,
+        "detail": "{\"columns\":\"340px\",\"viewport\":390,\"overflows\":0}"
+      },
+      {
+        "test": "Responsive form at 768px",
+        "pass": true,
+        "detail": "{\"columns\":\"718px\",\"viewport\":768,\"overflows\":0}"
+      },
+      {
+        "test": "Responsive form at 1440px",
+        "pass": true,
+        "detail": "{\"columns\":\"590px 590px\",\"viewport\":1440,\"overflows\":0}"
+      },
+      {
+        "test": "Real CSV download includes Matrix without API keys",
+        "pass": true,
+        "detail": ""
+      },
+      {
+        "test": "No JavaScript runtime errors",
+        "pass": true,
+        "detail": ""
+      }
+    ],
+    "passed": 14,
+    "failed": 0
+  },
+  "zip_installer": {
+    "native_wordpress_zip_installer": true,
+    "plugin_name": "Multi AI SEO Content Factory",
+    "version": "1.0.0",
+    "header_requirements_valid": true,
+    "main_sha256": "88119b8d579b5395429604089af60ffe0c5a683596713efe9fa6a56304469c2d"
+  },
+  "coding_standards": {
+    "phpcs": "3.13.3",
+    "wordpresscs": "3.4.1",
+    "scope": "Plugin PHP source excluding vendor, with documented narrowly scoped annotations",
+    "totals": {
+      "errors": 0,
+      "warnings": 0,
+      "fixable": 0
+    }
+  },
+  "syntax": {
+    "php_files_checked": 115,
+    "php_failed": 0,
+    "admin_javascript_check": "PASS"
+  },
+  "live_api_calls": 0
+}

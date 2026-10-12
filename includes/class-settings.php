@@ -1,310 +1,167 @@
 <?php
-/**
- * QuickCall Connect settings: defaults, sanitization, access.
+/** Validated settings; encrypted secrets never reach admin HTML or REST payloads. *
  *
- * @package QuickCallConnect
+ * @package MultiAISEOContentFactory
  */
 
-namespace QuickCallConnect;
+namespace MASF;
 
 defined( 'ABSPATH' ) || exit;
 
-/**
- * Settings class: defaults, sanitization and derived widget data.
- */
-class Settings {
-
-	const OPTION = 'quickcall_connect_settings';
-
+/** Settings implementation for the factory workflow. */
+final class Settings {
 	/**
-	 * Default settings.
+	 * Global.
 	 *
-	 * @return array
+	 * @return mixed Operation result.
 	 */
-	public static function defaults() {
-		$channels = array();
-		foreach ( Registry::channels() as $key => $meta ) {
-			$channels[ $key ] = array(
-				'value' => '',
-				'label' => '',
-			);
-		}
-
-		return array(
-			'enabled'    => 1,
-			'placement'  => 'right',
-			'channels'   => $channels,
-			'custom'     => array(
-				'label' => '',
-				'url'   => '',
-				'icon'  => 'chat',
-			),
-			'appearance' => array(
-				'bg'          => '#1a9d61',
-				'fg'          => '#ffffff',
-				'accent'      => '',
-				'size'        => 'md',
-				'gap'         => 'md',
-				'radius'      => 'md',
-				'offset_x'    => 16,
-				'offset_y'    => 16,
-				'show_labels' => 1,
-				'animation'   => 'subtle',
-				'new_tab'     => 1,
-			),
+	public static function global() {
+		return wp_parse_args(
+			get_option( 'masf_settings', array() ),
+			array(
+				'concurrency' => 1,
+				'max_retries' => 4,
+				'log_days'    => 30,
+				'title_min'   => 50,
+				'title_max'   => 75,
+				'meta_min'    => 120,
+				'meta_max'    => 180,
+			)
 		);
 	}
-
 	/**
-	 * Get merged settings.
+	 * Provider.
 	 *
-	 * @return array
+	 * @param string $name Name.
+	 *
+	 * @return mixed Operation result.
 	 */
-	public static function get() {
-		$saved = get_option( self::OPTION, array() );
-		if ( ! is_array( $saved ) ) {
-			$saved = array();
-		}
-		return self::merge( self::defaults(), $saved );
+	public static function provider( $name ) {
+		return wp_parse_args(
+			get_option( 'masf_provider_' . $name, array() ),
+			array(
+				'model'         => '',
+				'output_tokens' => 16000,
+				'timeout'       => 45,
+				'rpm'           => 6,
+				'daily_tokens'  => 1000000,
+				'input_price'   => 0,
+				'output_price'  => 0,
+			)
+		);
 	}
-
 	/**
-	 * Recursive defaults merge for known keys only.
+	 * Brand.
 	 *
-	 * @param array $defaults Defaults.
-	 * @param array $saved    Saved values.
-	 * @return array
+	 * @return mixed Operation result.
 	 */
-	private static function merge( $defaults, $saved ) {
-		$out = array();
-		foreach ( $defaults as $key => $default ) {
-			if ( is_array( $default ) ) {
-				$out[ $key ] = self::merge( $default, isset( $saved[ $key ] ) && is_array( $saved[ $key ] ) ? $saved[ $key ] : array() );
-			} else {
-				$out[ $key ] = array_key_exists( $key, $saved ) ? $saved[ $key ] : $default;
-			}
-		}
-		return $out;
+	public static function brand() {
+		return get_option( 'masf_brand', array() ); }
+	/**
+	 * Encrypt.
+	 *
+	 * @param string $plain Plain.
+	 *
+	 * @return mixed Operation result.
+	 * @throws \RuntimeException If the operation cannot complete.
+	 */
+	public static function encrypt( $plain ) {
+		if ( ! function_exists( 'openssl_encrypt' ) ) {
+			throw new \RuntimeException( 'Máy chủ cần OpenSSL để lưu khóa.' ); }
+		$key    = hash( 'sha256', wp_salt( 'auth' ) . wp_salt( 'secure_auth' ), true );
+		$iv     = random_bytes( 12 );
+		$tag    = '';
+		$cipher = openssl_encrypt( $plain, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $iv, $tag );
+		if ( false === $cipher ) {
+			throw new \RuntimeException( 'Không mã hóa được khóa.' ); }
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Encoding an encrypted AES-GCM blob for safe option storage, no code obfuscation.
+		return base64_encode( $iv . $tag . $cipher );
 	}
-
 	/**
-	 * Sanitize callback for register_setting(). All input is untrusted.
+	 * Key.
 	 *
-	 * @param array $input Raw input.
-	 * @return array Clean settings.
+	 * @param string $name Name.
+	 *
+	 * @return mixed Operation result.
 	 */
-	public static function sanitize( $input ) {
-		$clean = self::defaults();
-
-		// General.
-		$clean['enabled'] = empty( $input['enabled'] ) ? 0 : 1;
-
-		$clean['placement'] = 'right';
-		if ( isset( $input['placement'] ) && in_array( (string) $input['placement'], Registry::placements(), true ) ) {
-			$clean['placement'] = (string) $input['placement'];
-		}
-
-		// Channels.
-		$raw_channels = array();
-		if ( isset( $input['channels'] ) && is_array( $input['channels'] ) ) {
-			$raw_channels = $input['channels'];
-		}
-		foreach ( Registry::channels() as $key => $meta ) {
-			$clean['channels'][ $key ] = array(
-				'value' => '',
-				'label' => '',
-			);
-			if ( isset( $raw_channels[ $key ] ) && is_array( $raw_channels[ $key ] ) ) {
-				$raw                                = $raw_channels[ $key ];
-				$clean['channels'][ $key ]['value'] = self::sanitize_value( $meta['sanitize'], isset( $raw['value'] ) ? $raw['value'] : '' );
-				// Labels are plain text only.
-				$clean['channels'][ $key ]['label'] = sanitize_text_field( isset( $raw['label'] ) ? $raw['label'] : '' );
-			}
-		}
-
-		// Custom link / chatbot.
-		$custom                   = isset( $input['custom'] ) && is_array( $input['custom'] ) ? $input['custom'] : array();
-		$clean['custom']['label'] = sanitize_text_field( isset( $custom['label'] ) ? $custom['label'] : '' );
-		$clean['custom']['url']   = Registry::safe_url( isset( $custom['url'] ) ? $custom['url'] : '' );
-		$icon                     = isset( $custom['icon'] ) ? (string) $custom['icon'] : 'chat';
-		if ( ! array_key_exists( $icon, Registry::custom_icons() ) ) {
-			$icon = 'chat';
-		}
-		$clean['custom']['icon'] = $icon;
-
-		// Appearance.
-		$app = isset( $input['appearance'] ) && is_array( $input['appearance'] ) ? $input['appearance'] : array();
-
-		$clean['appearance']['bg']     = self::sanitize_color( isset( $app['bg'] ) ? $app['bg'] : '' );
-		$clean['appearance']['fg']     = self::sanitize_color( isset( $app['fg'] ) ? $app['fg'] : '' );
-		$clean['appearance']['accent'] = self::sanitize_color( isset( $app['accent'] ) ? $app['accent'] : '' );
-
-		$clean['appearance']['size']   = self::enum( isset( $app['size'] ) ? $app['size'] : '', array( 'sm', 'md', 'lg' ), 'md' );
-		$clean['appearance']['gap']    = self::enum( isset( $app['gap'] ) ? $app['gap'] : '', array( 'sm', 'md', 'lg' ), 'md' );
-		$clean['appearance']['radius'] = self::enum( isset( $app['radius'] ) ? $app['radius'] : '', array( 'sm', 'md', 'pill' ), 'md' );
-
-		$clean['appearance']['offset_x'] = self::clamp_int( isset( $app['offset_x'] ) ? $app['offset_x'] : 16, 0, 150, 16 );
-		$clean['appearance']['offset_y'] = self::clamp_int( isset( $app['offset_y'] ) ? $app['offset_y'] : 16, 0, 150, 16 );
-
-		$clean['appearance']['show_labels'] = empty( $app['show_labels'] ) ? 0 : 1;
-		$clean['appearance']['animation']   = self::enum( isset( $app['animation'] ) ? $app['animation'] : '', array( 'none', 'subtle' ), 'subtle' );
-		$clean['appearance']['new_tab']     = empty( $app['new_tab'] ) ? 0 : 1;
-
-		return $clean;
+	public static function key( $name ) {
+		$env = array(
+			'claude' => 'MASF_CLAUDE_API_KEY',
+			'gemini' => 'MASF_GEMINI_API_KEY',
+			'openai' => 'MASF_OPENAI_API_KEY',
+		);
+		if ( isset( $env[ $name ] ) && defined( $env[ $name ] ) ) {
+			return (string) constant( $env[ $name ] ); }
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Decoding a stored ciphertext blob only, never executing it.
+		$data = base64_decode( get_option( 'masf_key_' . $name, '' ), true );
+		if ( ! $data || strlen( $data ) < 29 ) {
+			return ''; }
+		$key = hash( 'sha256', wp_salt( 'auth' ) . wp_salt( 'secure_auth' ), true );
+		// phpcs:ignore Universal.Operators.DisallowShortTernary.Found -- Intentional empty-value fallback; plugin requires PHP 8.1+.
+		return openssl_decrypt( substr( $data, 28 ), 'aes-256-gcm', $key, OPENSSL_RAW_DATA, substr( $data, 0, 12 ), substr( $data, 12, 16 ) ) ?: '';
 	}
-
 	/**
-	 * Sanitize a channel value by type.
+	 * Model.
 	 *
-	 * @param string $type  'phone'|'url'|'email'.
-	 * @param mixed  $value Raw value.
-	 * @return string
+	 * @param mixed $value Value.
+	 *
+	 * @return mixed Operation result.
+	 * @throws \InvalidArgumentException If the operation cannot complete.
 	 */
-	public static function sanitize_value( $type, $value ) {
+	public static function model( $value ) {
 		$value = trim( (string) $value );
-		if ( '' === $value ) {
-			return '';
-		}
-		switch ( $type ) {
-			case 'phone':
-				$phone = preg_replace( '/[^0-9+]/', '', $value );
-				if ( ! preg_match( '/^\+?[0-9]{6,20}$/', $phone ) ) {
-					return '';
-				}
-				return $phone;
-			case 'email':
-				$email = sanitize_email( $value );
-				return is_email( $email ) ? $email : '';
-			case 'url':
-				return Registry::safe_url( $value );
-		}
-		return '';
+		if ( $value && ! preg_match( '/^[a-zA-Z0-9._:\/-]{1,150}$/D', $value ) ) {
+			throw new \InvalidArgumentException( 'Model ID không hợp lệ.' ); }
+		return $value;
 	}
-
 	/**
-	 * Sanitize a hex color. Empty string allowed (unset).
+	 * Campaign config.
 	 *
-	 * @param string $color Raw.
-	 * @return string
-	 */
-	public static function sanitize_color( $color ) {
-		$color = sanitize_hex_color( (string) $color );
-		return ( null === $color ) ? '' : $color;
-	}
-
-	/**
-	 * Strict enum check with fallback.
+	 * @param array $d D.
 	 *
-	 * @param string   $value     Raw.
-	 * @param string[] $allowed   Allowlist.
-	 * @param string   $fallback  Default.
-	 * @return string
+	 * @return mixed Operation result.
+	 * @throws \InvalidArgumentException If the operation cannot complete.
 	 */
-	public static function enum( $value, $allowed, $fallback ) {
-		$value = (string) $value;
-		return in_array( $value, $allowed, true ) ? $value : $fallback;
-	}
-
-	/**
-	 * Cast to int and clamp.
-	 *
-	 * @param mixed $raw      Raw.
-	 * @param int   $min      Min.
-	 * @param int   $max      Max.
-	 * @param int   $fallback Default when not numeric.
-	 * @return int
-	 */
-	public static function clamp_int( $raw, $min, $max, $fallback ) {
-		if ( is_numeric( $raw ) ) {
-			return max( $min, min( $max, (int) $raw ) );
+	public static function campaign_config( $d ) {
+		$provider  = in_array( $d['provider'] ?? '', array( 'claude', 'gemini', 'openai' ), true ) ? $d['provider'] : 'claude';
+		$providers = array( '', 'claude', 'gemini', 'openai' );
+		$min       = max( 1000, min( 5000, absint( $d['min_words'] ?? 1000 ) ) );
+		$max       = max( $min, min( 5000, absint( $d['max_words'] ?? 2000 ) ) );
+		$mode      = in_array( $d['mode'] ?? '', array( 'draft', 'pending', 'publish', 'schedule' ), true ) ? $d['mode'] : 'draft';
+		$start     = sanitize_text_field( $d['schedule_start'] ?? '' );
+		if ( 'schedule' === $mode ) {
+			$dt = \DateTimeImmutable::createFromFormat( 'Y-m-d\TH:i', $start, wp_timezone() );
+			if ( ! $dt || $dt->format( 'Y-m-d\TH:i' ) !== $start || $dt->getTimestamp() <= time() ) {
+				throw new \InvalidArgumentException( 'Chọn ngày giờ tương lai theo múi giờ WordPress.' ); }
 		}
-		return $fallback;
-	}
-
-	/**
-	 * Active channels: every configured channel that resolves to a valid href,
-	 * in registry order, plus the custom link at the end.
-	 *
-	 * @param array $settings Merged settings.
-	 * @return array[] List of { key, label, href, icon, external }.
-	 */
-	public static function active_channels( $settings ) {
-		$active = array();
-		if ( empty( $settings['enabled'] ) ) {
-			return $active;
-		}
-
-		foreach ( Registry::channels() as $key => $meta ) {
-			$value = isset( $settings['channels'][ $key ]['value'] ) ? $settings['channels'][ $key ]['value'] : '';
-			$href  = Registry::href( $key, $value );
-			if ( '' === $href ) {
-				continue; // Blank/invalid channels stay hidden.
-			}
-			$label    = $settings['channels'][ $key ]['label'];
-			$active[] = array(
-				'key'      => $key,
-				'label'    => '' !== $label ? $label : $meta['label'],
-				'href'     => $href,
-				'icon'     => $meta['icon'],
-				'external' => ( 'url' === $meta['kind'] ),
-			);
-		}
-
-		$custom_url = isset( $settings['custom']['url'] ) ? $settings['custom']['url'] : '';
-		$custom_url = Registry::safe_url( $custom_url );
-		if ( '' !== $custom_url ) {
-			$custom_label = isset( $settings['custom']['label'] ) ? $settings['custom']['label'] : '';
-			$custom_icon  = isset( $settings['custom']['icon'] ) ? $settings['custom']['icon'] : 'chat';
-			if ( ! array_key_exists( $custom_icon, Registry::custom_icons() ) ) {
-				$custom_icon = 'chat';
-			}
-			$active[] = array(
-				'key'      => 'custom',
-				'label'    => '' !== $custom_label ? $custom_label : __( 'Chat with us', 'quickcall-connect' ),
-				'href'     => $custom_url,
-				'icon'     => $custom_icon,
-				'external' => true,
-			);
-		}
-
-		return $active;
-	}
-
-	/**
-	 * CSS custom properties for the widget root.
-	 *
-	 * @param array $settings Merged settings.
-	 * @return string Inline style attribute value (already escaped parts, built from validated data).
-	 */
-	public static function css_vars( $settings ) {
-		$app = $settings['appearance'];
-
-		$sizes = array(
-			'sm' => '46px',
-			'md' => '54px',
-			'lg' => '62px',
+		return array(
+			'language'          => preg_match( '/^[a-z]{2}(?:[-_][A-Za-z]{2})?$/D', $d['language'] ?? '' ) ? $d['language'] : 'vi',
+			'provider'          => $provider,
+			'model'             => self::model( $d['model'] ?? '' ),
+			'fallback'          => in_array( $d['fallback'] ?? '', $providers, true ) ? ( $d['fallback'] ?? '' ) : '',
+			'fallback_model'    => self::model( $d['fallback_model'] ?? '' ),
+			'reviewer'          => in_array( $d['reviewer'] ?? '', $providers, true ) ? ( $d['reviewer'] ?? '' ) : '',
+			'reviewer_model'    => self::model( $d['reviewer_model'] ?? '' ),
+			'repair_provider'   => in_array( $d['repair_provider'] ?? '', $providers, true ) ? ( $d['repair_provider'] ?? '' ) : '',
+			'repair_model'      => self::model( $d['repair_model'] ?? '' ),
+			'min_words'         => $min,
+			'max_words'         => $max,
+			'intent'            => sanitize_text_field( $d['intent'] ?? 'Informational' ),
+			'brief'             => mb_substr( sanitize_textarea_field( $d['brief'] ?? '' ), 0, 12000 ),
+			'sources'           => mb_substr( sanitize_textarea_field( $d['sources'] ?? '' ), 0, 24000 ),
+			'category'          => absint( $d['category'] ?? get_option( 'default_category' ) ),
+			'internal_links'    => array_values( array_unique( array_filter( array_map( 'absint', preg_split( '/[\s,;]+/', (string) ( $d['internal_links'] ?? '' ) ) ) ) ) ),
+			'mode'              => $mode,
+			'auto_publish'      => ! empty( $d['auto_publish'] ) && in_array( $mode, array( 'publish', 'schedule' ), true ),
+			'batch_size'        => in_array( absint( $d['batch_size'] ?? 5 ), array( 1, 5, 10, 20 ), true ) ? absint( $d['batch_size'] ?? 5 ) : 5,
+			'daily_articles'    => max( 1, min( 500, absint( $d['daily_articles'] ?? 5 ) ) ),
+			'concurrency'       => max( 1, min( 3, absint( $d['concurrency'] ?? 1 ) ) ),
+			'budget'            => max( 0, (float) ( $d['budget'] ?? 0 ) ),
+			'qa_threshold'      => max( 50, min( 100, absint( $d['qa_threshold'] ?? 75 ) ) ),
+			'max_repairs'       => max( 0, min( 5, absint( $d['max_repairs'] ?? 2 ) ) ),
+			'require_review'    => ! empty( $d['require_review'] ),
+			'schedule_start'    => $start,
+			'schedule_interval' => max( 1, absint( $d['schedule_interval'] ?? 24 ) ),
 		);
-		$gaps  = array(
-			'sm' => '6px',
-			'md' => '10px',
-			'lg' => '16px',
-		);
-		$radii = array(
-			'sm'   => '12px',
-			'md'   => '18px',
-			'pill' => '999px',
-		);
-
-		$vars   = array();
-		$vars[] = '--qc-bg:' . ( '' !== $app['bg'] ? $app['bg'] : '#1a9d61' );
-		$vars[] = '--qc-fg:' . ( '' !== $app['fg'] ? $app['fg'] : '#ffffff' );
-		$vars[] = '--qc-accent:' . ( '' !== $app['accent'] ? $app['accent'] : $app['bg'] );
-		$vars[] = '--qc-size:' . ( isset( $sizes[ $app['size'] ] ) ? $sizes[ $app['size'] ] : '54px' );
-		$vars[] = '--qc-gap:' . ( isset( $gaps[ $app['gap'] ] ) ? $gaps[ $app['gap'] ] : '10px' );
-		$vars[] = '--qc-radius:' . ( isset( $radii[ $app['radius'] ] ) ? $radii[ $app['radius'] ] : '18px' );
-		$vars[] = '--qc-ox:' . (int) $app['offset_x'] . 'px';
-		$vars[] = '--qc-oy:' . (int) $app['offset_y'] . 'px';
-
-		return implode( ';', $vars );
 	}
 }

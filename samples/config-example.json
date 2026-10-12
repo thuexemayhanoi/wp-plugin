@@ -1,0 +1,7 @@
+{
+  "note": "Mẫu tham khảo, không phải bộ import settings tự động. Không chứa API key hay dữ liệu doanh nghiệp điền sẵn.",
+  "global": { "concurrency": 1, "max_retries": 4, "title_min": 50, "title_max": 75, "meta_min": 120, "meta_max": 180 },
+  "brand": { "name": "", "address": "", "phone": "", "website": "", "maps": "", "hours": "", "prices": "", "deposit": "", "allowed": "", "forbidden": "Không tự tạo giá, chính sách, khuyến mãi hoặc thông tin pháp luật." },
+  "providers": { "claude": { "model": "", "output_tokens": 12000, "timeout": 45, "rpm": 6, "daily_tokens": 1000000, "input_price": 0, "output_price": 0 }, "gemini": { "model": "" }, "openai": { "model": "" } },
+  "campaign": { "language": "vi", "provider": "claude", "model": "", "fallback": "", "reviewer": "", "repair_provider": "", "min_words": 1000, "max_words": 2000, "mode": "draft", "auto_publish": false, "batch_size": 5, "daily_articles": 5, "budget": 0, "qa_threshold": 75, "max_repairs": 2, "require_review": false }
+}
