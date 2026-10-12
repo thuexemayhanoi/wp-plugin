@@ -33,7 +33,7 @@
 
 ### Chạy CI và build
 
-`.github/workflows/ci.yml` chạy PHP syntax + mock smoke test, kiểm tra cấu trúc ZIP và tải artifact. **CI không chạy API tính phí hoặc WordPress/Hostinger live**. Report lịch sử bản 1.0.0 và test giả lập bản 1.1.0 ở [`TEST-REPORT.md`](TEST-REPORT.md), [`TEST-REPORT-V110.md`](TEST-REPORT-V110.md). Các tuyên bố kiểm thử cần đọc đúng phạm vi.
+`.github/workflows/ci.yml` chạy PHP syntax + mock smoke test, kiểm tra cấu trúc ZIP, tải artifact và phát hành GitHub Release khi push Git tag `vX.Y.Z` khớp phiên bản đã kiểm thử. **CI không chạy API tính phí hoặc WordPress/Hostinger live**. Report lịch sử bản 1.0.0 và test giả lập bản 1.1.0 ở [`TEST-REPORT.md`](TEST-REPORT.md), [`TEST-REPORT-V110.md`](TEST-REPORT-V110.md). Các tuyên bố kiểm thử cần đọc đúng phạm vi.
 
 ## Tài liệu
 

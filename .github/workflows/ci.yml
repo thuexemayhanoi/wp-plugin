@@ -2,6 +2,7 @@ name: CI & Build WordPress ZIP
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 permissions:
@@ -49,3 +50,35 @@ jobs:
           path: dist/multi-ai-seo-content-factory.zip
           if-no-files-found: error
           retention-days: 30
+
+  github-release:
+    name: Publish tagged WordPress ZIP
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [lint-and-build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download tested ZIP
+        uses: actions/download-artifact@v4
+        with:
+          name: multi-ai-seo-content-factory-wordpress-zip
+          path: release
+      - name: Validate release version matches plugin source
+        run: |
+          python3 - <<'PYCODE'
+          import re, os, zipfile
+          tag=os.environ['GITHUB_REF_NAME']
+          z='release/multi-ai-seo-content-factory.zip'
+          with zipfile.ZipFile(z) as f:
+              main=f.read('multi-ai-seo-content-factory/multi-ai-seo-content-factory.php').decode()
+          m=re.search(r'(?m)^ \* Version: (\d+\.\d+\.\d+)', main)
+          assert m is not None and tag == 'v' + m.group(1), f'tag {tag} does not match plugin version'
+          print('Release version match:', tag)
+          PYCODE
+      - name: GitHub Release (only tagged commits after QA)
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/multi-ai-seo-content-factory.zip
+          generate_release_notes: true
+          fail_on_unmatched_files: true

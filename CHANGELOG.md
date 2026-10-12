@@ -12,3 +12,10 @@
 ## 1.0.0
 
 Initial engine, scheduler, Matrix, QA, provider adapters and CSV/XLSX import.
+
+### Repository transition (2026-10-12)
+
+- Move editable Multi AI SEO Content Factory v1.1.0 into `thuexemayhanoi/wp-plugin`, retaining prior QuickCall code through backup branch and Git history.
+- Add Action workflow for PHP lint, 23 mock smoke checks, deployable ZIP artifact, and GitHub Releases for matching `vX.Y.Z` tags.
+- Exclude development documents, scripts and tests from installation ZIP while preserving editable source in repository.
+- No changes to live WordPress, paid APIs or existing website content.
