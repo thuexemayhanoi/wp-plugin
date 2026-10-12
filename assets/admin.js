@@ -29,27 +29,16 @@
   const quick = document.querySelector('.masf-quick');
   if (quick) {
     const provider = quick.querySelector('select[name="provider"]');
-    const key = quick.querySelector('input[name="api_key"]');
-    const model = quick.querySelector('#masf-quick-model');
-    const tokens = quick.querySelector('select[name="output_tokens"]');
-    const toggle = quick.querySelector('#masf-show-key');
-    const configurations = MASFAdmin.providers || {};
-    provider.addEventListener('change', () => {
-      const data = configurations[provider.value] || {};
-      model.value = data.model || '';
-      tokens.value = ['4000', '8000', '16000', '32000', '64000'].includes(String(data.tokens)) ? String(data.tokens) : '16000';
+    provider?.addEventListener('change', () => {
       quick.querySelectorAll('[data-key-provider]').forEach(n => n.classList.toggle('masf-hidden', n.dataset.keyProvider !== provider.value));
     });
-    toggle.addEventListener('change', () => { key.type = toggle.checked ? 'text' : 'password'; });
-    quick.querySelector('form').addEventListener('submit', event => {
+    quick.querySelector('form')?.addEventListener('submit', event => {
       const count = Number(quick.querySelector('input[name="count"]').value);
       const text = quick.querySelector('textarea[name="titles"]').value.trim();
       const file = quick.querySelector('input[name="matrix_file"]').files;
       if (!text && !file.length) { event.preventDefault(); alert('Nhập tiêu đề hoặc chọn Excel/CSV.'); return; }
-      if (count > 1 && Number(tokens.value) === 4000) {
-        // Not a blocker; 4K may be too short for the requested word count.
-        if (!window.confirm('4.000 output tokens có thể không đủ cho bài dài, dẫn đến lỗi QA. Vẫn tiếp tục?')) event.preventDefault();
-      }
+      const rows = text ? text.split(/\r?\n/).filter(Boolean).length : 0;
+      if (!file.length && rows < count) { event.preventDefault(); alert(`Bạn chọn ${count} bài nhưng chỉ nhập ${rows} tiêu đề.`); }
     });
   }
   if (document.getElementById('masf-summary')) {

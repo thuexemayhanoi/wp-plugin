@@ -1,53 +1,32 @@
-# Multi AI SEO Content Factory (WordPress)
+# Multi AI SEO Content Factory — WordPress v1.2.0
 
-**Current version: 1.1.0 — developer source repository.** Tạo bài viết SEO bằng API Claude, Gemini hoặc OpenAI ngay trong WordPress. Giao diện **AI Content Factory → Viết bài nhanh** hỗ trợ từ **1 đến 100 bài**, chọn danh mục, dán tiêu đề hoặc nhập CSV/Excel `.xlsx`, đặt mục tiêu **1.000–5.000 từ/bài** và trần output **4k–64k token** tùy model.
+**Plugin tạo bài Markdown đơn giản**, hỗ trợ API Claude, Gemini, OpenAI; quản lý source chính tại repo `thuexemayhanoi/wp-plugin`.
 
-> **Không phải chatbot.** Repository này đã thay thế mã QuickCall Connect cũ. Lịch sử Git cũ vẫn có thể xem để khôi phục, nhưng không còn mã chatbot trong cây nguồn hiện tại.
+## Dùng trong WordPress (giao diện tiếng Việt)
 
-## Cài đặt ZIP
+1. **AI Content Factory → Cài đặt API**: nhập API key và Model ID hợp lệ của một nhà cung cấp, bấm **Lưu API & Model**. Key được mã hóa AES-256-GCM bằng salt của WordPress; để trống khi đã lưu. Không có key trong repo/ZIP; plugin không biết trực tiếp số dư tiền.
+2. **AI Content Factory → Viết bài nhanh**: chọn AI, số bài **1–100**, mục tiêu từ **1.500–10.000 từ**, ngôn ngữ, danh mục cha/con, **Nháp** hoặc **Xuất bản sau khi viết**, số lượng H2/H3/H4/H5/H6.
+3. Nhập tiêu đề, mỗi dòng một tiêu đề, hoặc Excel `.xlsx`/CSV cột `title`. Xác nhận chi phí API rồi bấm **Bắt đầu viết bài**.
+4. Xem tiến độ trong **Viết bài nhanh** hoặc **Chiến dịch viết bài**. Mở bài ở mục **Bài viết** WordPress, nội dung Markdown được chuyển an toàn thành HTML và bản nguồn nằm trong hộp **Markdown gốc của bài AI** dưới trình sửa bài.
 
-1. Vào tab **Actions → CI & Build WordPress ZIP**, chọn run thành công rồi tải artifact `multi-ai-seo-content-factory-wordpress-zip`.
-2. Giải nén artifact tải từ GitHub Actions **một lần** để lấy đúng file `multi-ai-seo-content-factory.zip`.
-3. WordPress Admin → **Plugins → Add New → Upload Plugin** → chọn `multi-ai-seo-content-factory.zip` → Install/Replace → Activate.
-4. Vào **AI Content Factory → Viết bài nhanh**; nhập API key và Model ID được cấp quyền; bắt đầu với 1–5 bài **Draft**. Xem [hướng dẫn tiếng Việt](QUICK-START-VI.md).
+**Không có vòng QA/reviewer cho chiến dịch mới chế độ đơn giản.** An toàn kỹ thuật (nonce/quyền admin, lọc HTML, giới hạn request, trạng thái, lưu nháp/checkpoint, xử lý lỗi/quota) vẫn bắt buộc. API có thể trả nội dung ngắn hơn mục tiêu hoặc sai số lượng heading; phải tự kiểm tra khi xuất bản. Model khác nhau có giới hạn output; bài 10.000 từ không được bảo đảm trong một lượt API.
 
-### Lưu ý khi sử dụng
+## Phát triển và đóng gói
 
-- Khóa API được mã hóa phía máy chủ; không commit khóa vào repo, không gửi key lên issue/PR. ChatGPT Plus/Claude/Gemini subscription không thay thế API credit.
-- Plugin phân biệt 429 do **rate limit** (retry) và một số lỗi **insufficient quota/billing** (tạm dừng). Không hiển thị số dư tài khoản API, phải kiểm tra trong cổng thanh toán nhà cung cấp.
-- **4.000 output token không đảm bảo bài 5.000 từ**. Trần output phụ thuộc model, request, ngân sách và giới hạn nhà cung cấp; mặc định 16.000, cần Test Connection.
-- Action Scheduler 4.2.0 được đóng gói trong source, chạy qua WP-Cron/cron server; không bắt buộc để admin mở trang.
-- Draft mặc định. Luôn rà soát factuality, copyright, SEO, NAP, nội dung AI và chi phí trước khi xuất bản. Không chạy 100 bài trên production khi chưa nghiệm thu thử 1–5 bài.
+- `multi-ai-seo-content-factory.php`: điểm vào WordPress; `includes/class-admin.php`: giao diện;
+- `includes/class-engine.php`: engine; `includes/class-markdown.php`: chuyển Markdown an toàn và hiển thị nguồn trong editor;
+- `includes/class-{openai,claude,gemini,adapter,providers,settings}.php`: các API;
+- `includes/class-{queue,store,importer}.php`: hàng đợi, checkpoint, Excel/CSV;
+- `vendor/action-scheduler/`: thư viện chạy nền (giữ giấy phép kèm theo);
+- `.github/workflows/ci.yml`: PHP 8.1/8.3 lint, smoke tests và ZIP artifact; tag `v1.2.0` tạo Release nếu CI đạt.
 
-## Mã nguồn và phát triển
+Cục bộ: `php tests/smoke-v120.php && python3 scripts/build_plugin.py`. ZIP: `dist/multi-ai-seo-content-factory.zip` (thư mục gốc chính xác); không đóng gói tài liệu phát triển hoặc test.
 
-- Điểm vào WordPress: [`multi-ai-seo-content-factory.php`](multi-ai-seo-content-factory.php).
-- Giao diện/tạo chiến dịch: [`includes/class-admin.php`](includes/class-admin.php).
-- API adapters: `includes/class-claude.php`, `class-gemini.php`, `class-openai.php`, `class-adapter.php`, `class-api-error.php`.
-- Hàng đợi/checkpoint, QA: `includes/class-queue.php`, `class-engine.php`, `class-qa.php`, `class-store.php`.
-- Excel/CSV: `includes/class-importer.php`.
-- JavaScript/CSS admin: `assets/`.
-- Thư viện phụ thuộc bundled: `vendor/action-scheduler` (giữ nguyên license và nguồn gốc thư viện).
-- Smoke test giả lập: `php tests/smoke-v110.php`; PHP lint `find . -name '*.php' -print0 | xargs -0 -n1 php -l`.
-- Build ZIP local (Python 3.10+): `python scripts/build_plugin.py`; output `dist/multi-ai-seo-content-factory.zip`.
+## An toàn và giới hạn
 
-### Chạy CI và build
+- Chưa xác minh bằng API key thật hoặc WordPress production. Bản test mới chỉ là mock/lint/package; không khẳng định đã sửa được mọi lỗi runtime.
+- Khóa API không xuất ra HTML, JS, log hoặc GitHub. Cẩn trọng khi chia sẻ database backup.
+- Không xóa bảng/bài đang dùng khi cập nhật. Bài từ workflow cũ vẫn giữ đường chạy cũ khi có.
+- Nên chạy 1 bài nháp trước, sau đó 5 bài, rồi mới tăng lên 100 bài. Kiểm tra lỗi billing/quota tại trang tài khoản API.
 
-`.github/workflows/ci.yml` chạy PHP syntax + mock smoke test, kiểm tra cấu trúc ZIP, tải artifact và phát hành GitHub Release khi push Git tag `vX.Y.Z` khớp phiên bản đã kiểm thử. **CI không chạy API tính phí hoặc WordPress/Hostinger live**. Report lịch sử bản 1.0.0 và test giả lập bản 1.1.0 ở [`TEST-REPORT.md`](TEST-REPORT.md), [`TEST-REPORT-V110.md`](TEST-REPORT-V110.md). Các tuyên bố kiểm thử cần đọc đúng phạm vi.
-
-## Tài liệu
-
-- [AGENTS.md](AGENTS.md) — quy tắc cho ChatGPT/Claude/Gemini/coding agents.
-- [QUICK-START-VI.md](QUICK-START-VI.md) — dùng màn hình viết nhanh.
-- [INSTALLATION.md](INSTALLATION.md) — cài, cập nhật, cron và yêu cầu hosting.
-- [CONFIGURATION.md](CONFIGURATION.md) — API/providers và bảo mật.
-- [WORKFLOW.md](WORKFLOW.md) — Matrix, queue, QA, retry, checkpoints.
-- [COMPATIBILITY.md](COMPATIBILITY.md) / [RECOVERY.md](RECOVERY.md) — vận hành và phục hồi.
-- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) / [docs/RELEASE.md](docs/RELEASE.md) — dev và release.
-- [CHANGELOG.md](CHANGELOG.md) — lịch sử nâng cấp.
-
-## Tương thích và kiểm thử
-
-WordPress 6.9+, PHP 8.1+, MySQL/MariaDB, `mbstring`, `dom`, `openssl`, và `zip` + `simplexml` để nhập Excel. Phiên bản **1.1.0 chưa được xác nhận bằng API key thật hoặc production**; tài liệu 1.0.0 chứa kết quả tích hợp cục bộ trước đó.
-
-**License: GPL-3.0-or-later.** Action Scheduler và các thư viện đi kèm giữ giấy phép riêng trong `vendor`.
+Đọc thêm: [AGENTS.md](AGENTS.md), [CHANGELOG.md](CHANGELOG.md), [QUICK-START-VI.md](QUICK-START-VI.md), [SECURITY.md](SECURITY.md).

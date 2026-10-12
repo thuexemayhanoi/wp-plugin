@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Multi AI SEO Content Factory
  * Description: Chiến dịch nội dung SEO, nhập Excel/CSV, hàng đợi an toàn và Claude / Gemini / OpenAI API.
- * Version: 1.1.0
+ * Version: 1.2.0
  * Requires at least: 6.9
  * Requires PHP: 8.1
  * Author: Multi AI SEO Content Factory
@@ -13,7 +13,7 @@
  */
 
 defined( 'ABSPATH' ) || exit;
-define( 'MASF_VERSION', '1.1.0' );
+define( 'MASF_VERSION', '1.2.0' );
 define( 'MASF_FILE', __FILE__ );
 define( 'MASF_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -41,7 +41,7 @@ if ( $masf_missing_extensions ) {
 
 // Action Scheduler performs its own version negotiation across all plugins.
 require_once MASF_DIR . 'vendor/action-scheduler/action-scheduler.php';
-foreach ( array( 'store', 'settings', 'providers', 'importer', 'qa', 'engine', 'queue', 'admin' ) as $masf_module ) {
+foreach ( array( 'store', 'settings', 'providers', 'importer', 'qa', 'markdown', 'engine', 'queue', 'admin' ) as $masf_module ) {
 	require_once MASF_DIR . 'includes/class-' . $masf_module . '.php';
 }
 
@@ -55,5 +55,6 @@ add_action(
 		}
 		\MASF\Queue::boot();
 		\MASF\Admin::boot();
+		add_action( 'add_meta_boxes_post', array( '\MASF\Markdown', 'metabox' ) );
 	}
 );

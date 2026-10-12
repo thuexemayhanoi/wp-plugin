@@ -16,7 +16,7 @@ final class QA {
 	 * @return mixed Operation result.
 	 */
 	public static function allowed_html() {
-		return array_fill_keys( array( 'p', 'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'strong', 'em', 'blockquote', 'br', 'hr', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'pre', 'code', 'figure', 'figcaption' ), array() ) + array(
+		return array_fill_keys( array( 'p', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'strong', 'em', 'blockquote', 'br', 'hr', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'pre', 'code', 'figure', 'figcaption' ), array() ) + array(
 			'a' => array(
 				'href'  => true,
 				'title' => true,

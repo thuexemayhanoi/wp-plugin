@@ -18,13 +18,8 @@ final class Admin {
 	private static $pages = array(
 		'masf'           => 'Viết bài nhanh',
 		'masf-campaigns' => 'Chiến dịch viết bài',
-		'masf-matrix'    => 'Danh sách bài / Matrix',
-		'masf-queue'     => 'Hàng đợi / Queue',
-		'masf-qa'        => 'SEO & QA',
-		'masf-schedule'  => 'Lịch xuất bản',
-		'masf-providers' => 'API Providers',
-		'masf-settings'  => 'Cài đặt',
-		'masf-logs'      => 'Logs & Reports',
+		'masf-matrix'    => 'Danh sách bài',
+		'masf-providers' => 'Cài đặt API',
 	);
 	/**
 	 * Boot.
@@ -280,66 +275,50 @@ final class Admin {
 	 */
 	private static function dashboard() {
 		$s = self::stats();
-		echo '<div class="masf-cards" id="masf-summary">';
-		foreach ( $s['counts'] as $status => $n ) {
-			echo '<div class="masf-card"><span>' . esc_html( $status ) . '</span><strong data-status="' . esc_attr( $status ) . '">' . absint( $n ) . '</strong></div>'; }
-		echo '</div><div class="masf-panel"><p>Tổng: <b>' . absint( $s['total'] ) . '</b> · Queue: ' . absint( $s['queue'] ) . ' · Đã giao bài: ' . absint( $s['completed'] ) . ' · Tiến độ <b id="masf-progress">' . esc_html( $s['progress'] ) . '%</b></p><progress max="100" value="' . esc_attr( $s['progress'] ) . '"></progress>';
-		// phpcs:ignore Universal.Operators.DisallowShortTernary.Found -- Intentional empty-value fallback; plugin requires PHP 8.1+.
-		echo '<p>Input/output token: ' . esc_html( $s['usage']['input_tokens'] . '/' . $s['usage']['output_tokens'] ) . ' · Chi phí ước tính USD: ' . esc_html( $s['usage']['cost'] ) . ' · Dự phòng chưa xác nhận: ' . esc_html( $s['usage']['reserved_cost'] ) . '</p><p>Lần xử lý gần nhất (UTC): ' . esc_html( $s['last_processed'] ?: 'chưa chạy' ) . '</p>';
-		echo '<p>Worker đang xử lý: ' . esc_html( $s['active'] ? wp_json_encode( $s['active'], JSON_UNESCAPED_UNICODE ) : 'không có' ) . '</p><p>Chi phí dựa trên giá token quản trị viên nhập; giá bằng 0 nghĩa là chưa có ước tính. READY có thể là bản nháp, chờ duyệt hoặc đã lên lịch.</p></div>';
+		echo '<div class="masf-panel"><h2>Tiến độ viết bài</h2><p>Đã tạo: <b>' . absint( $s['total'] ) . '</b> · Đã hoàn thành: <b>' . absint( $s['completed'] ) . '</b> · Đang chờ: <b>' . absint( $s['queue'] ) . '</b> · Tiến độ <b id="masf-progress">' . esc_html( $s['progress'] ) . '%</b></p>';
+		echo '<progress max="100" value="' . esc_attr( $s['progress'] ) . '"></progress>';
+		echo '<p>Token input/output: ' . esc_html( $s['usage']['input_tokens'] . '/' . $s['usage']['output_tokens'] ) . ' · Chi phí ước tính USD: ' . esc_html( $s['usage']['cost'] ) . ' (chỉ có ý nghĩa khi đã cấu hình đơn giá API).</p></div>';
 		self::recent_errors();
 		self::campaign_table();
-		echo '<div class="masf-panel"><h2>Tự động nền</h2><p>Action Scheduler chạy từng bước, không cần mở Dashboard. WP-Cron cần lượt truy cập; xem INSTALLATION.md để đặt real cron tùy chọn trên Hostinger. Mặc định một worker. Lô là số bài cần xử lý, không phải số API request đồng thời.</p></div>';
 	}
+
 	/**
 	 * The common path: one form, one campaign, bounded article count.
 	 * API keys are write-only; no balance is inferred from a successful test.
 	 */
 	private static function quick_form() {
-		$provider_labels = array( 'claude' => 'Claude (Anthropic)', 'gemini' => 'Gemini (Google)', 'openai' => 'OpenAI' );
-		$chosen = 'claude';
-		foreach ( $provider_labels as $name => $label ) {
-			if ( Settings::key( $name ) && Settings::provider( $name )['model'] ) {
-				$chosen = $name;
-				break;
-			}
-		}
-		$preferred = sanitize_key( (string) get_option( 'masf_last_quick_provider', '' ) );
-		if ( isset( $provider_labels[ $preferred ] ) ) { $chosen = $preferred; }
-		$defaults = Settings::provider( $chosen );
-		$defaults['model'] = get_option( 'masf_last_quick_model_' . $chosen, $defaults['model'] );
-		echo '<div class="masf-panel masf-quick"><h2>🚀 Tạo 1–100 bài SEO trong một màn hình</h2>';
-		echo '<p>Chọn AI, API key, model, danh mục, số bài, độ dài và tiêu đề. Khi nhấn chạy, plugin tạo bài <strong>Draft</strong> trong WordPress qua hàng đợi nền; không tự đăng.</p>';
+		$labels = array( 'claude' => 'Claude', 'gemini' => 'Gemini', 'openai' => 'ChatGPT / OpenAI' );
+		$chosen = sanitize_key( (string) get_option( 'masf_last_quick_provider', 'claude' ) );
+		if ( ! isset( $labels[ $chosen ] ) ) { $chosen = 'claude'; }
+		echo '<div class="masf-panel masf-quick"><h2>✍️ Viết bài Markdown — đơn giản</h2>';
+		echo '<p>Nhập API một lần ở <a href="' . esc_url( admin_url( 'admin.php?page=masf-providers' ) ) . '">Cài đặt API</a>. Tại đây chỉ cần chọn AI, tiêu đề, số từ, thẻ heading, danh mục và nhấn Viết.</p>';
 		self::begin( 'quick_create', 0, true );
 		echo '<div class="masf-grid">';
-		self::select( '1. Chọn AI', 'provider', $provider_labels, $chosen );
-		self::input( '2. API key mới (bỏ trống nếu đã lưu)', 'api_key', '', 'password', 'autocomplete="new-password" maxlength="500"' );
+		self::select( '1. AI viết bài', 'provider', $labels, $chosen );
 		echo '<p class="masf-hint masf-key-status">';
-		foreach ( $provider_labels as $name => $label ) {
-			echo '<span data-key-provider="' . esc_attr( $name ) . '" class="' . ( $name === $chosen ? '' : 'masf-hidden' ) . '">' . esc_html( $label . ': ' . ( Settings::key( $name ) ? '✅ đã lưu key' : 'chưa có key' ) ) . '</span>';
+		foreach ( $labels as $name => $label ) {
+			$d = Settings::provider( $name );
+			echo '<span data-key-provider="' . esc_attr( $name ) . '" class="' . ( $name === $chosen ? '' : 'masf-hidden' ) . '">' . esc_html( $label . ': ' . ( Settings::key( $name ) && $d['model'] ? '✅ API và model đã lưu' : '⚠️ Hãy nhập API + Model ID trong Cài đặt API' ) ) . '</span>';
 		}
 		echo '</p>';
-		echo '<label class="masf-check"><input id="masf-show-key" type="checkbox"> Hiển thị key đang nhập (không hiện key đã lưu)</label>';
-		echo '<label>3. Model ID (tùy tài khoản) <input type="text" name="model" required maxlength="150" value="' . esc_attr( $defaults['model'] ) . '" placeholder="Nhập model ID từ tài khoản API" id="masf-quick-model" list="masf-quick-models"></label>';
-		echo '<datalist id="masf-quick-models">';
-		foreach ( get_transient( 'masf_models_' . $chosen ) ?: array() as $m ) {
-			echo '<option value="' . esc_attr( $m ) . '"></option>';
-		}
-		echo '</datalist>';
-		self::input( '4. Số bài (1–100)', 'count', 5, 'number', 'required min="1" max="100" step="1"' );
-		echo '<label>5. Danh mục bài viết';
-		wp_dropdown_categories( array( 'name' => 'category', 'hide_empty' => false, 'hierarchical' => true, 'selected' => (int) get_option( 'default_category' ) ) );
+		self::input( '2. Số bài (1–100)', 'count', 1, 'number', 'required min="1" max="100" step="1"' );
+		self::input( '3. Số từ mỗi bài (1.500–10.000)', 'words', 1500, 'number', 'required min="1500" max="10000" step="100"' );
+		self::select( '4. Ngôn ngữ', 'language', array( 'vi' => 'Tiếng Việt', 'en' => 'English', 'es' => 'Español', 'fr' => 'Français', 'zh' => '中文', 'ko' => '한국어', 'ja' => '日本語' ), 'vi' );
+		echo '<label>5. Danh mục cha / con';
+		wp_dropdown_categories( array( 'name' => 'category', 'hide_empty' => false, 'hierarchical' => true, 'show_option_none' => false, 'selected' => (int) get_option( 'default_category' ) ) );
 		echo '</label>';
-		self::input( '6. Độ dài mục tiêu (1.000–5.000 từ)', 'words', 1500, 'number', 'required min="1000" max="5000" step="100"' );
-		self::select( '7. Ngôn ngữ', 'language', array( 'vi' => 'Tiếng Việt', 'en' => 'English', 'es' => 'Español', 'fr' => 'Français', 'zh' => '中文', 'ko' => '한국어', 'ja' => '日本語' ), 'vi' );
-		self::select( '8. Output tokens / yêu cầu', 'output_tokens', array( '4000' => '4.000 (bài ngắn)', '8000' => '8.000', '16000' => '16.000 (khuyến nghị)', '32000' => '32.000', '64000' => '64.000 (chỉ khi model hỗ trợ)' ), (string) ( in_array( (int) $defaults['output_tokens'], array( 4000, 8000, 16000, 32000, 64000 ), true ) ? $defaults['output_tokens'] : 16000 ) );
+		self::select( '6. Lưu bài dưới dạng', 'mode', array( 'draft' => 'Nháp (an toàn)', 'publish' => 'Xuất bản sau khi viết' ), 'draft' );
+		echo '</div><h3>Số lượng thẻ tiêu đề trong bài (không tạo H1)</h3><div class="masf-headings">';
+		foreach ( array( 'h2' => 5, 'h3' => 6, 'h4' => 0, 'h5' => 0, 'h6' => 0 ) as $tag => $default ) {
+			self::input( strtoupper( $tag ), $tag, $default, 'number', 'min="' . ( 'h2' === $tag ? '1' : '0' ) . '" max="20" step="1"' );
+		}
 		echo '</div>';
-		self::area( '9. Tiêu đề (mỗi dòng một bài) — hoặc nhập Excel/CSV', 'titles', '', 7 );
-		self::input( 'File Excel .xlsx hoặc CSV chứa cột title / tiêu đề', 'matrix_file', '', 'file', 'accept=".xlsx,.csv"' );
-		echo '<p class="description">Có thể kết hợp tiêu đề viết tay và file. Số bài phải ≤ số tiêu đề; chỉ lấy số dòng đầu tiên đã chọn. Bỏ qua tiêu đề trùng đã tồn tại. Khi tài khoản API hết credit, plugin dừng chiến dịch và hiện lý do. Không thể biết chính xác số dư API chỉ từ key.</p>';
-		self::check( 'Tôi đồng ý thực hiện các yêu cầu API có thể phát sinh phí (chỉ tạo Draft)', 'confirm_cost' );
-		self::submit( '🚀 Tạo chiến dịch và chạy viết bài' );
-		echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=masf-providers' ) ) . '">Cấu hình API nâng cao / Test Connection</a> · <a href="' . esc_url( admin_url( 'admin.php?page=masf-campaigns' ) ) . '">Quản lý chiến dịch</a></p></div>';
+		self::area( '7. Nhập tiêu đề — mỗi dòng một bài', 'titles', '', 8 );
+		self::input( 'Hoặc tải file Excel .xlsx / CSV (cột title)', 'matrix_file', '', 'file', 'accept=".xlsx,.csv"' );
+		echo '<p class="description">Chỉ dùng số tiêu đề tương ứng với số bài đã chọn. Nội dung được viết bằng Markdown, hiển thị thành bài WordPress và lưu Markdown gốc bên dưới trình sửa bài. Bài dài phụ thuộc giới hạn output token của model; số từ/H2–H6 là mục tiêu, không bảo đảm chính xác tuyệt đối.</p>';
+		self::check( 'Tôi xác nhận API có thể phát sinh chi phí', 'confirm_cost' );
+		self::submit( '✍️ Bắt đầu viết bài' );
+		echo '</div>';
 	}
 
 	/** The latest failures are actionable directly from the homepage. */
@@ -348,7 +327,7 @@ final class Admin {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Fresh factory diagnostics from trusted custom table.
 		$rows = $wpdb->get_results( 'SELECT id,campaign_id,title,error FROM ' . Store::table( 'articles' ) . " WHERE status IN ('FAILED','BLOCKED') ORDER BY updated_at DESC LIMIT 8", ARRAY_A );
 		if ( ! $rows ) { return; }
-		echo '<div class="masf-panel"><h2>⚠️ Bài lỗi cần kiểm tra</h2><p>FAILED không có nghĩa là API hết tiền. Xem nguyên nhân từng bài, sửa rồi chọn Retry Failed → Resume.</p><div class="masf-table"><table class="widefat striped"><thead><tr><th>Bài / Campaign</th><th>Lý do và cách xử lý</th></tr></thead><tbody>';
+		echo '<div class="masf-panel"><h2>⚠️ Bài lỗi cần kiểm tra</h2><p>Nếu gặp lỗi API, xem nội dung lỗi và chọn Thử lại ở Đợt viết bài sau khi đã sửa API.</p><div class="masf-table"><table class="widefat striped"><thead><tr><th>Bài / Campaign</th><th>Lý do và cách xử lý</th></tr></thead><tbody>';
 		foreach ( $rows as $r ) {
 			echo '<tr><td><a href="' . esc_url( admin_url( 'admin.php?page=masf-matrix&article=' . absint( $r['id'] ) ) ) . '">' . esc_html( $r['title'] ) . '</a><br>#' . absint( $r['campaign_id'] ) . '</td><td>' . esc_html( $r['error'] ) . '</td></tr>';
 		}
@@ -517,35 +496,23 @@ final class Admin {
 	 * @return mixed Operation result.
 	 */
 	private static function providers() {
-		echo '<p>Khóa chỉ lưu phía máy chủ; ô trống giữ khóa cũ. Lấy catalog từ API rồi chọn model và lưu. OpenAI catalog có thể gồm model không hỗ trợ Responses; Test Connection xác minh model đã chọn. Không có model cũ được hardcode.</p>';
-		foreach ( array(
-			'claude' => 'Anthropic Claude — Messages API',
-			'gemini' => 'Google Gemini — AI Studio API',
-			'openai' => 'OpenAI — Responses API',
-		) as $name => $label ) {
+		echo '<p>Chỉ cần nhập khóa API và Model ID của AI muốn sử dụng, rồi bấm Lưu. Khóa được mã hóa ở máy chủ, không hiện lại trên trang và không gửi lên GitHub. Để trống ô khóa nếu đã lưu. Thuê bao ChatGPT/Claude/Gemini không thay thế API credit.</p>';
+		foreach ( array( 'claude' => 'Claude (Anthropic)', 'gemini' => 'Gemini (Google)', 'openai' => 'GPT (OpenAI)' ) as $name => $label ) {
 			$d = Settings::provider( $name );
-			echo '<div class="masf-panel"><h2>' . esc_html( $label ) . '</h2><p>Khóa: ' . ( Settings::key( $name ) ? 'đã cấu hình' : 'chưa có / cần nhập lại' ) . '</p>';
+			echo '<div class="masf-panel"><h2>' . esc_html( $label ) . '</h2><p>' . ( Settings::key( $name ) ? '✅ Có API key đã lưu' : '⚠️ Chưa có API key' ) . '</p>';
 			self::begin( 'save_provider' );
 			echo '<input type="hidden" name="provider" value="' . esc_attr( $name ) . '"><div class="masf-grid">';
-			self::input( 'API key mới (không hiển thị lại)', 'api_key', '', 'password', 'autocomplete="new-password" maxlength="500"' );
-			self::input( 'Model ID mặc định', 'model', $d['model'], 'text', 'list="masf-models-' . esc_attr( $name ) . '"' );
+			self::input( 'API key (được mã hóa, không hiển thị lại)', 'api_key', '', 'password', 'autocomplete="new-password" maxlength="500"' );
+			self::input( 'Model ID', 'model', $d['model'], 'text', 'required maxlength="150" list="masf-models-' . esc_attr( $name ) . '"' );
 			echo '<datalist id="masf-models-' . esc_attr( $name ) . '">';
-			// phpcs:ignore Universal.Operators.DisallowShortTernary.Found -- Intentional empty-value fallback; plugin requires PHP 8.1+.
-			foreach ( get_transient( 'masf_models_' . $name ) ?: array() as $model ) {
-				echo '<option value="' . esc_attr( $model ) . '"></option>';
-			} echo '</datalist>';
-			self::input( 'Output token tối đa/request', 'output_tokens', $d['output_tokens'], 'number', 'min="512" max="64000"' );
-			self::input( 'Timeout giây (10–60)', 'timeout', $d['timeout'], 'number', 'min="10" max="60"' );
-			self::input( 'Request/phút cục bộ', 'rpm', $d['rpm'], 'number', 'min="1" max="60"' );
-			self::input( 'Token/ngày (UTC)', 'daily_tokens', $d['daily_tokens'], 'number', 'min="1000"' );
-			self::input( 'USD / 1 triệu input token (model đang dùng)', 'input_price', $d['input_price'], 'number', 'min="0" step="0.0001"' );
-			self::input( 'USD / 1 triệu output token', 'output_price', $d['output_price'], 'number', 'min="0" step="0.0001"' );
-			echo '</div>';
-			self::check( 'Xóa khóa đã lưu của provider này', 'remove_key' );
-			self::submit( 'Lưu API Provider' );
-			echo '<div class="masf-buttons"><button class="button masf-api" data-provider="' . esc_attr( $name ) . '" data-operation="models">Lấy danh sách model</button><button class="button masf-api" data-provider="' . esc_attr( $name ) . '" data-operation="test">Test Connection (có dùng token)</button></div><p class="masf-result" role="status"></p></div>';
+			foreach ( get_transient( 'masf_models_' . $name ) ?: array() as $model ) { echo '<option value="' . esc_attr( $model ) . '"></option>'; }
+			echo '</datalist></div>';
+			self::check( 'Xóa API key đã lưu', 'remove_key' );
+			self::submit( 'Lưu API & Model' );
+			echo '<div class="masf-buttons"><button type="button" class="button masf-api" data-provider="' . esc_attr( $name ) . '" data-operation="models">Tìm model</button><button type="button" class="button masf-api" data-provider="' . esc_attr( $name ) . '" data-operation="test">Thử kết nối (tốn ít token)</button></div><p class="masf-result" role="status"></p></div>';
 		}
 	}
+
 	/**
 	 * Settings.
 	 *
@@ -789,15 +756,9 @@ final class Admin {
 					$name = sanitize_key( $d['provider'] ?? '' );
 					if ( ! in_array( $name, array( 'claude', 'gemini', 'openai' ), true ) ) {
 								throw new \InvalidArgumentException( 'Provider không hợp lệ.' ); }
-					$p   = array(
-						'model'         => Settings::model( $d['model'] ?? '' ),
-						'output_tokens' => max( 512, min( 64000, absint( $d['output_tokens'] ?? 16000 ) ) ),
-						'timeout'       => max( 10, min( 60, absint( $d['timeout'] ?? 45 ) ) ),
-						'rpm'           => max( 1, min( 60, absint( $d['rpm'] ?? 6 ) ) ),
-						'daily_tokens'  => max( 1000, absint( $d['daily_tokens'] ?? 1000000 ) ),
-						'input_price'   => max( 0, (float) ( $d['input_price'] ?? 0 ) ),
-						'output_price'  => max( 0, (float) ( $d['output_price'] ?? 0 ) ),
-					);
+					$p = Settings::provider( $name );
+					$p['model'] = Settings::model( $d['model'] ?? '' );
+					$p['daily_tokens'] = max( 6000000, (int) $p['daily_tokens'] );
 					$key = trim( $d['api_key'] ?? '' );
 					if ( $key && ( strlen( $key ) > 500 || preg_match( '/[\s\x00-\x1f]/', $key ) ) ) {
 							throw new \InvalidArgumentException( 'API key có ký tự không hợp lệ.' ); }
@@ -848,87 +809,58 @@ final class Admin {
 	 */
 	private static function create_quick( $d ) {
 		global $wpdb;
-		if ( empty( $d['confirm_cost'] ) ) {
-			throw new \InvalidArgumentException( 'Xác nhận phí API trước khi chạy.' );
-		}
+		if ( empty( $d['confirm_cost'] ) ) { throw new \InvalidArgumentException( 'Bạn cần xác nhận khả năng phát sinh phí API.' ); }
 		$provider = sanitize_key( $d['provider'] ?? '' );
-		if ( ! in_array( $provider, array( 'claude', 'gemini', 'openai' ), true ) ) {
-			throw new \InvalidArgumentException( 'Chọn nhà cung cấp API hợp lệ.' );
-		}
+		if ( ! in_array( $provider, array( 'claude', 'gemini', 'openai' ), true ) ) { throw new \InvalidArgumentException( 'Chọn AI hợp lệ.' ); }
+		$cfg_provider = Settings::provider( $provider );
+		if ( ! Settings::key( $provider ) || ! $cfg_provider['model'] ) { throw new \InvalidArgumentException( 'Vào Cài đặt API, nhập khóa và Model ID của AI đã chọn rồi lưu trước.' ); }
 		$count = absint( $d['count'] ?? 0 );
 		$words = absint( $d['words'] ?? 0 );
-		if ( $count < 1 || $count > 100 || $words < 1000 || $words > 5000 ) {
-			throw new \InvalidArgumentException( 'Chọn 1–100 bài và 1.000–5.000 từ.' );
-		}
-		$model = Settings::model( $d['model'] ?? '' );
-		if ( ! $model ) {
-			throw new \InvalidArgumentException( 'Nhập Model ID để tránh gọi sai API.' );
-		}
-		$key = trim( (string) ( $d['api_key'] ?? '' ) );
-		if ( $key && ( strlen( $key ) > 500 || preg_match( '/[\s\x00-\x1f]/', $key ) ) ) {
-			throw new \InvalidArgumentException( 'API key có ký tự không hợp lệ.' );
-		}
-		if ( ! $key && ! Settings::key( $provider ) ) {
-			throw new \InvalidArgumentException( 'Nhập API key hoặc lưu API key trong API Providers trước.' );
-		}
+		if ( $count < 1 || $count > 100 || $words < 1500 || $words > 10000 ) { throw new \InvalidArgumentException( 'Chọn 1–100 bài và 1.500–10.000 từ.' ); }
+		$mode = sanitize_key( $d['mode'] ?? 'draft' );
+		if ( ! in_array( $mode, array( 'draft', 'publish' ), true ) ) { throw new \InvalidArgumentException( 'Chọn trạng thái bài hợp lệ.' ); }
+		if ( 'publish' === $mode && ! current_user_can( 'publish_posts' ) ) { throw new \InvalidArgumentException( 'Tài khoản không có quyền xuất bản.' ); }
 		$cat = absint( $d['category'] ?? 0 );
 		$term = get_term( $cat, 'category' );
-		if ( ! $term || is_wp_error( $term ) ) {
-			throw new \InvalidArgumentException( 'Danh mục WordPress không hợp lệ.' );
+		if ( ! $term || is_wp_error( $term ) ) { throw new \InvalidArgumentException( 'Danh mục cha/con không hợp lệ.' ); }
+		$headings = array();
+		foreach ( array( 'h2', 'h3', 'h4', 'h5', 'h6' ) as $tag ) {
+			$headings[ $tag ] = absint( $d[ $tag ] ?? 0 );
+			if ( $headings[ $tag ] > 20 ) { throw new \InvalidArgumentException( 'Mỗi loại H2–H6 tối đa 20.' ); }
 		}
+		if ( $headings['h2'] < 1 || array_sum( $headings ) > 60 ) { throw new \InvalidArgumentException( 'H2 ít nhất 1 và tổng H2–H6 tối đa 60.' ); }
 		$titles = preg_split( '/\r\n|\r|\n/', (string) ( $d['titles'] ?? '' ) );
 		$rows = array();
-		foreach ( $titles as $title ) {
-			if ( trim( $title ) ) { $rows[] = array( 'title' => $title ); }
-		}
+		foreach ( $titles as $title ) { if ( trim( $title ) ) { $rows[] = array( 'title' => $title ); } }
 		if ( ! empty( $_FILES['matrix_file']['name'] ) ) {
-			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Importer validates uploaded temp file and content.
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Importer validates uploaded file structure.
 			$rows = array_merge( $rows, Importer::upload( $_FILES['matrix_file'] ) );
 		}
-		if ( count( $rows ) < $count ) {
-			throw new \InvalidArgumentException( 'Bạn chọn ' . $count . ' bài nhưng chỉ nhập ' . count( $rows ) . ' tiêu đề. Hãy thêm tiêu đề hoặc giảm số bài.' );
-		}
+		if ( count( $rows ) < $count ) { throw new \InvalidArgumentException( 'Chọn ' . $count . ' bài nhưng mới có ' . count( $rows ) . ' tiêu đề.' ); }
 		$rows = array_slice( $rows, 0, $count );
 		$config = Settings::campaign_config( array(
-			'provider' => $provider,
-			'model' => $model,
-			'language' => sanitize_text_field( $d['language'] ?? 'vi' ),
-			'category' => $cat,
-			'min_words' => max( 1000, intdiv( $words * 90, 100 ) ),
-			'max_words' => min( 5000, intdiv( $words * 110 + 99, 100 ) ),
-			'intent' => 'Informational',
-			'mode' => 'draft',
-			'batch_size' => 20,
-			'daily_articles' => $count,
-			'qa_threshold' => 75,
-			'max_repairs' => 2,
+			'simple_mode' => 1, 'provider' => $provider, 'model' => $cfg_provider['model'],
+			'language' => sanitize_text_field( $d['language'] ?? 'vi' ), 'category' => $cat,
+			'min_words' => max( 1500, (int) floor( $words * 0.90 ) ),
+			'max_words' => min( 10000, (int) ceil( $words * 1.10 ) ),
+			'h2' => $headings['h2'], 'h3' => $headings['h3'], 'h4' => $headings['h4'], 'h5' => $headings['h5'], 'h6' => $headings['h6'],
+			'mode' => $mode, 'auto_publish' => 'publish' === $mode ? 1 : 0,
+			'batch_size' => 20, 'daily_articles' => $count, 'max_repairs' => 0,
 		) );
-		$cfg = Settings::provider( $provider );
-		if ( ! $cfg['model'] ) { $cfg['model'] = $model; }
-		$tokens = absint( $d['output_tokens'] ?? 16000 );
-		if ( ! in_array( $tokens, array( 4000, 8000, 16000, 32000, 64000 ), true ) ) {
-			throw new \InvalidArgumentException( 'Giới hạn output tokens không hợp lệ.' );
-		}
-		$config['output_tokens'] = $tokens;
-		// Save key only after every input and file has passed validation.
-		if ( $key ) { update_option( 'masf_key_' . $provider, Settings::encrypt( $key ), false ); }
-		update_option( 'masf_provider_' . $provider, $cfg, false );
-		update_option( 'masf_last_quick_provider', $provider, false );
-		update_option( 'masf_last_quick_model_' . $provider, $model, false );
-		$name = 'Nhanh ' . wp_date( 'Y-m-d H:i', time() ) . ' — ' . $provider;
+		$config['target_words'] = $words;
+		// Larger requests need more output tokens; the provider may enforce a smaller cap.
+		$config['output_tokens'] = max( 12000, min( 64000, (int) ceil( $words * 3.5 ) ) );
+		$name = 'Viết nhanh ' . wp_date( 'Y-m-d H:i' ) . ' · ' . $provider;
 		$ok = $wpdb->insert( Store::table( 'campaigns' ), array(
 			'name' => $name, 'status' => 'PAUSED', 'config' => wp_json_encode( $config ),
 			'created_by' => get_current_user_id(), 'created_at' => Store::now(), 'updated_at' => Store::now(),
 		) );
-		if ( ! $ok ) { throw new \RuntimeException( 'Không tạo được chiến dịch.' ); }
+		if ( ! $ok ) { throw new \RuntimeException( 'Không tạo được đợt viết bài.' ); }
 		$id = (int) $wpdb->insert_id;
 		$result = Importer::add( $id, $rows );
-		if ( ! $result['added'] ) {
-			// Preserve campaign for audit; nothing is billed and it stays PAUSED.
-			throw new \InvalidArgumentException( 'Không có bài mới được thêm (có thể tất cả tiêu đề bị trùng). Chiến dịch đã lưu nhưng chưa chạy.' );
-		}
+		if ( ! $result['added'] ) { throw new \InvalidArgumentException( 'Tiêu đề trùng hoặc không hợp lệ. Đợt đã được lưu ở trạng thái tạm dừng.' ); }
 		Queue::control( $id, 'start' );
-		return array( 'id' => $id, 'message' => 'Đã tạo campaign #' . $id . ' và xếp ' . $result['added'] . '/' . $count . ' bài Draft vào hàng đợi. ' . ( $result['skipped'] ? 'Bỏ qua ' . count( $result['skipped'] ) . ' tiêu đề trùng/không hợp lệ. ' : '' ) . 'Không xác nhận số dư tiền API; xem lỗi ở dưới nếu nhà cung cấp từ chối request.' );
+		return array( 'id' => $id, 'message' => 'Đã đưa ' . $result['added'] . ' bài vào hàng đợi. Chế độ: ' . ( 'publish' === $mode ? 'tự xuất bản' : 'lưu nháp' ) . '. Có thể theo dõi ở Danh sách bài; AI sẽ viết Markdown từng bài.' );
 	}
 
 	/**

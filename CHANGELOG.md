@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.0 — 2026-10-12
+- Rút gọn trang Viết bài nhanh và Cài đặt API: chỉ chọn AI đã lưu, tiêu đề / Excel, 1–100 bài, 1.500–10.000 từ, danh mục cha/con, nháp hoặc chủ động xuất bản.
+- Chọn mục tiêu số thẻ H2, H3, H4, H5, H6; không sinh H1 vì WordPress dùng tiêu đề bài.
+- Workflow đơn giản bỏ vòng QA/reviewer; vẫn giữ lọc Markdown/HTML, quyền hạn, checkpoint, retry và giới hạn API. Workflow cũ vẫn tương thích.
+- Markdown được lưu trong post meta `_masf_markdown`, chuyển thành HTML an toàn và có hộp xem nguồn tại WordPress editor.
+- Kiểm thử mock mới `tests/smoke-v120.php`, GitHub Actions lint + build ZIP.
+- Giới hạn: số từ/số heading là mục tiêu theo prompt, không có xác nhận API thực tế; bài rất dài có thể thất bại do giới hạn model.
+
+# Changelog
+
 ## 1.1.0 — 2026-10-12
 
 - Added one-page **Viết bài nhanh**: provider/key/model, count 1–100, category, target 1,000–5,000 words, language, selectable 4k–64k output tokens, titles or Excel/CSV, queue start and Draft-only default.
@@ -12,10 +22,3 @@
 ## 1.0.0
 
 Initial engine, scheduler, Matrix, QA, provider adapters and CSV/XLSX import.
-
-### Repository transition (2026-10-12)
-
-- Move editable Multi AI SEO Content Factory v1.1.0 into `thuexemayhanoi/wp-plugin`, retaining prior QuickCall code through backup branch and Git history.
-- Add Action workflow for PHP lint, 23 mock smoke checks, deployable ZIP artifact, and GitHub Releases for matching `vX.Y.Z` tags.
-- Exclude development documents, scripts and tests from installation ZIP while preserving editable source in repository.
-- No changes to live WordPress, paid APIs or existing website content.

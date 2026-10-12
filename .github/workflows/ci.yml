@@ -26,7 +26,7 @@ jobs:
       - name: PHP syntax
         run: find . -type f -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Quick flow smoke tests (mocks; no paid API calls)
-        run: php tests/smoke-v110.php
+        run: php tests/smoke-v120.php
       - name: Build ZIP
         run: python3 scripts/build_plugin.py
       - name: Validate WordPress ZIP layout

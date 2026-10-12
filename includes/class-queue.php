@@ -73,6 +73,9 @@ final class Queue {
 			// Never select an article already published, scheduled or delivered for review.
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Factory checkpoints require direct custom-table operations. Fresh lease, quota and queue reads must not use stale cache. Table identifiers come only from Store::table() or wpdb; values use placeholders.
 			$wpdb->query( $wpdb->prepare( "UPDATE $t SET status=IF(content IS NULL OR content='', 'PLANNED','QA'),phase=IF(content IS NULL OR content='','write','qa'),retry_count=0,repair_count=0,error='',next_run=%s WHERE campaign_id=%d AND status IN ('FAILED','BLOCKED') AND completed_at IS NULL", Store::now(), $id ) );
+			if ( ! empty( $c['config']['simple_mode'] ) ) {
+				$wpdb->query( $wpdb->prepare( "UPDATE $t SET status='READY',phase='deliver' WHERE campaign_id=%d AND content IS NOT NULL AND content<>'' AND completed_at IS NULL AND status='QA'", $id ) );
+			}
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Factory checkpoints require direct custom-table operations. Fresh lease, quota and queue reads must not use stale cache.
 			$wpdb->update(
 				Store::table( 'campaigns' ),

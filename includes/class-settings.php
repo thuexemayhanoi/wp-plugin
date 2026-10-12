@@ -44,7 +44,7 @@ final class Settings {
 				'output_tokens' => 16000,
 				'timeout'       => 45,
 				'rpm'           => 6,
-				'daily_tokens'  => 1000000,
+				'daily_tokens'  => 6000000,
 				'input_price'   => 0,
 				'output_price'  => 0,
 			)
@@ -125,8 +125,8 @@ final class Settings {
 	public static function campaign_config( $d ) {
 		$provider  = in_array( $d['provider'] ?? '', array( 'claude', 'gemini', 'openai' ), true ) ? $d['provider'] : 'claude';
 		$providers = array( '', 'claude', 'gemini', 'openai' );
-		$min       = max( 1000, min( 5000, absint( $d['min_words'] ?? 1000 ) ) );
-		$max       = max( $min, min( 5000, absint( $d['max_words'] ?? 2000 ) ) );
+		$min       = max( 1500, min( 10000, absint( $d['min_words'] ?? 1500 ) ) );
+		$max       = max( $min, min( 10000, absint( $d['max_words'] ?? 2000 ) ) );
 		$mode      = in_array( $d['mode'] ?? '', array( 'draft', 'pending', 'publish', 'schedule' ), true ) ? $d['mode'] : 'draft';
 		$start     = sanitize_text_field( $d['schedule_start'] ?? '' );
 		if ( 'schedule' === $mode ) {
@@ -135,6 +135,8 @@ final class Settings {
 				throw new \InvalidArgumentException( 'Chọn ngày giờ tương lai theo múi giờ WordPress.' ); }
 		}
 		return array(
+			'simple_mode'       => ! empty( $d['simple_mode'] ),
+			'simple_headings'   => array( 'h2' => max( 1, min( 20, absint( $d['h2'] ?? 5 ) ) ), 'h3' => min( 30, absint( $d['h3'] ?? 6 ) ), 'h4' => min( 30, absint( $d['h4'] ?? 0 ) ), 'h5' => min( 30, absint( $d['h5'] ?? 0 ) ), 'h6' => min( 30, absint( $d['h6'] ?? 0 ) ) ),
 			'language'          => preg_match( '/^[a-z]{2}(?:[-_][A-Za-z]{2})?$/D', $d['language'] ?? '' ) ? $d['language'] : 'vi',
 			'provider'          => $provider,
 			'model'             => self::model( $d['model'] ?? '' ),
