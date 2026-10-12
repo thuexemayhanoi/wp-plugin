@@ -14,7 +14,7 @@ namespace {
  function wp_nonce_field($x){echo '<input type="hidden" name="nonce" value="test">';}
  function get_transient($v){return [];} function checked($a,$b,$c){return $a===$b?'checked':'';} function selected($a,$b,$echo){return (string)$a===(string)$b?'selected':'';}
  function esc_textarea($v){return esc_html($v);} function wp_kses($v,$allowed){return strip_tags($v,'<p><h2><h3><h4><h5><h6><strong><em><ul><li><ol><a><code><pre>');}
- function wp_strip_all_tags($v){return strip_tags($v);} function mb_substr($v,$start,$max){return substr($v,$start,$max);}
+ function wp_strip_all_tags($v){return strip_tags($v);} if (!function_exists('mb_substr')) { function mb_substr($v,$start,$max){return substr($v,$start,$max);} }
  class DummyDB { public $insert_id=0; public $last=[]; public function insert($table,$row){$this->last=$row;$this->insert_id++;return 1;} }
  $wpdb=new DummyDB();$GLOBALS['opts']=['masf_provider_claude'=>['model'=>'claude-test-model','output_tokens'=>16000,'timeout'=>45]];
 }
