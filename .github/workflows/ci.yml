@@ -58,6 +58,15 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Upload separate Qwen Local beta ZIP
+        if: matrix.php == '8.3'
+        uses: actions/upload-artifact@v4
+        with:
+          name: qwen-local-writer-beta-zip
+          path: dist/qwen-local-writer.zip
+          if-no-files-found: error
+          retention-days: 30
+
   github-release:
     name: Publish tagged WordPress ZIP
     if: startsWith(github.ref, 'refs/tags/v')
