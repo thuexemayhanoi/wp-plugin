@@ -25,6 +25,13 @@ jobs:
           tools: none
       - name: PHP syntax
         run: find . -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Qwen offline beta technical QA and JavaScript syntax
+        run: |
+          php qwen-local-writer/tests/quality.php
+          node --check qwen-local-writer/assets/qwen-worker.js
+          node --check qwen-local-writer/assets/local-writer.js
+          python3 scripts/build_qwen.py
+          python3 -m zipfile -t dist/qwen-local-writer.zip
       - name: Quick flow smoke tests (mocks; no paid API calls)
         run: php tests/smoke-v120.php
       - name: Build ZIP
