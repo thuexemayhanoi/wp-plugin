@@ -1,3 +1,17 @@
+# Qwen Local Writer — No Commercial AI API (Beta Branch)
+
+> **New development path:** [Qwen Local Writer source](qwen-local-writer/README.md) | [Architecture spec](docs/superpowers/specs/2026-10-23-qwen-local-writer-design.md) | [PR #1](https://github.com/thuexemayhanoi/wp-plugin/pull/1)
+>
+> The **separate `qwen-local-writer/` WordPress plugin** is a no-paid-API, WebGPU browser-local Qwen3-0.6B draft editor aiming for ~1,500 words and a **technical** QA threshold of 70/100. It writes WordPress **drafts only**; no paid Claude/Gemini/OpenAI inference, no API keys, no hidden PHP model backend.
+>
+> **Beta warning:** Syntax/QA/build CI passing does not mean actual WebGPU inference or WordPress staging activation has been verified. Qwen can hallucinate and may miss 1,500 words; browser must stay open; initial JS library uses a pinned CDN module requiring vendoring and security review before production. Do **not** deploy to the active website yet.
+>
+> **Legacy preservation:** The older API-driven plugin **below** remains unchanged in this repository to protect existing campaigns and database state. The standalone Qwen ZIP contains none of the commercial-provider PHP classes. No destructive migration or automated removal of existing credentials has taken place.
+
+---
+
+## Legacy v1.2 plugin documentation (preserved)
+
 # Multi AI SEO Content Factory — WordPress v1.2.0
 
 **Plugin tạo bài Markdown đơn giản**, hỗ trợ API Claude, Gemini, OpenAI; quản lý source chính tại repo `thuexemayhanoi/wp-plugin`.
