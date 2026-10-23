@@ -2,17 +2,17 @@
 
 Ngày: 2026-10-23 · Nhánh `feat/qwen-local-no-paid-api` · PR #1
 
-## Tóm tắt (lần chạy model thật mới nhất đã PASS: run 39907043073, commit 6d56b1a)
+## Tóm tắt (lần chạy model thật mới nhất: lần 11, run 39920519362, commit 5a0620a — PASS)
 
 | Kiểm thử | Kết quả |
 |---|---|
-| 4 bài VI/EN, Qwen3-0.6B thật, CPU (Node + onnxruntime-node), mã điều phối của plugin | 1.476–1.720 từ, 7–8 H2, **QA 90–100**, 233–362 giây/bài |
-| 1 bài VI trong Chromium qua giao diện plugin thật (WASM q4, không GPU) → lưu nháp WordPress | **1.716 từ, 29 phút, nháp #5, QA 100**, tải lại model từ cache 5 giây |
+| 4 bài VI/EN, Qwen3-0.6B thật, CPU (Node + onnxruntime-node), mã điều phối của plugin, QA 0.3.0 | 1.480–1.738 từ, 7–8 H2, **QA 75–100**, 254–375 giây/bài |
+| 1 bài VI trong Chromium qua giao diện plugin thật (WASM q4, không GPU) → lưu nháp WordPress | **1.754 từ, 27,5 phút, nháp #5, QA 80**, tải lại model từ cache 0,04 phút |
 | Máy chủ trình duyệt liên hệ | chỉ `huggingface.co`, `us.aws.cdn.hf.co`, `secure.gravatar.com` (WordPress) |
-| Plugin trên WordPress sạch 6.9.10/PHP 8.1 và 7.1.3/PHP 8.3 + MySQL 8 (cùng plugin cũ 1.2.0) | tích hợp 49/49, E2E 45/45, gỡ cài đặt giữ bài |
+| Plugin trên WordPress sạch 6.9.10/PHP 8.1, 7.1.3/PHP 8.3 và 7.1.3/PHP 8.3 + WooCommerce/Yoast/Rank Math (MySQL 8, cùng plugin cũ 1.2.0) | tích hợp 66/66 (68/68 khi có Yoast + Rank Math), E2E 59/59, nâng/hạ phiên bản, gỡ cài đặt giữ bài |
 
-QA ≥ 70 là **điểm kỹ thuật**; mọi bài vẫn có lỗi nội dung cần biên tập (mục 2.2, 2.5, 2.6). Mẫu gốc: `docs/qwen-samples/`.
-Sau lần chạy này chỉ sửa thêm 2 chi tiết làm sạch (mục 2.6) — lần chạy model thật cho commit cuối được ghi ở PR #1.
+QA ≥ 70 là **điểm kiểm tra tự động**, không phải bằng chứng nội dung đúng: mọi bài vẫn có lỗi cần biên tập (mục 2.11–2.12).
+Mẫu gốc: `docs/qwen-samples/`.
 
 ## 1. Đo thực tế với model thật (probe CI, GitHub Actions ubuntu-latest, 4 vCPU, 16 GB RAM, không GPU)
 
@@ -134,6 +134,21 @@ giá lệch brief −15, 4 câu mua/thuê −10, "kể trải nghiệm" −10, t
 gắn 150.000 cho Vision) và "…nên đảm bảo rằng mình đã cập nhật…" ("mình" = chính họ). Đã sửa cả hai, có test hồi quy từ
 nguyên câu (QA 67/67). Tính lại từ bảng trừ điểm trên: 100 − 10 − 5 = **85**; con số này là phép tính từ log, không phải
 chấm lại tệp bài (artifact không tải được từ môi trường này). 4 câu "người mua/mua xe" là lỗi thật của model, vẫn bị đánh dấu.
+
+### 2.11 Lần chạy 10 (run 39917543001, commit fcaf19f) — PASS
+CPU: vi-brief 1.703 từ / QA 90 ("tôi đã chọn chiếc Honda Wave", "số … mà chúng tôi đã giới thiệu"); en-brief 1.560 / 80 ("the 50cc
+scooter costs 4 million VND" — 4 triệu là tiền cọc trong brief, không phải giá thuê; "higher-end models offer more time"); vi-general
+1.678 / 80 ("Theo các chuyên gia…" không nguồn; "những công cụ … mà mình đã có" — **báo nhầm**, "mình" = chính người đọc, đã hết
+báo nhầm từ `5a0620a`); en-general 1.535 / 100. Chromium/WASM: **1.686 từ, 24,9 phút**, 1,4 token/s, nháp #5, QA 85.
+
+### 2.12 Lần chạy 11 (run 39920519362, commit 5a0620a) — PASS
+CPU: vi-brief 1.689 / QA 75 — QA bắt được "700.000đ/tuần cho xe Honda Vision" (brief: Vision 1.000.000đ/tuần, 700.000đ/tuần là giá
+Wave; giá viết **trước** tên xe — chỉ bắt được nhờ sửa lỗi #13), "50.000đ/ngày cho xe tay ga" (không có trong brief), 1 câu "người
+mua xe"; en-brief 1.539 / 85 ("a deposit option for the 50cc scooter, costing 4 million VND/day": số tiền cọc đúng nhưng ghi
+"/day" là sai — QA xếp vào "giá lệch brief", cần người sửa); vi-general 1.738 / 100; en-general 1.480 / 100.
+Chromium/WASM: **1.754 từ, 8 H2, 27,5 phút**, 1,5 token/s, 10 lần gọi, 2.411 token, nháp #5, **QA 80**: link bịa
+`https://www.longben.com/` (−5), 3 câu mua/thuê (−10), thiếu nguyên văn từ khóa (−5). Không còn báo nhầm "giá trước tên xe" hay "mình".
+Tải lại từ cache 0,04 phút; chỉ liên hệ Hugging Face + gravatar.
 
 ### 2.8 0.3.0-beta: chấm lại bài thật bằng QA mới (kiểm chứng dữ kiện + SEO)
 Cùng các bài gốc trong `docs/qwen-samples/`, cùng brief như CI, chấm bằng QA 0.3.0 (không chạy lại model):

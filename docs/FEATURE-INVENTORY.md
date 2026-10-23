@@ -27,13 +27,13 @@ Cách đọc cột **Tested**:
 | Transformers.js 4.3.1 + ORT Web đóng gói, không CDN, kiểm tra sha512/sha256 | yes | UNIT + CI | DONE | `scripts/vendor_qwen_deps.py`, `assets/vendor/manifest.json`, `build_qwen.py` (từ chối chuỗi CDN/API) |
 | Không dùng API AI thương mại, không API key | yes | REAL WP + E2E | DONE | quét ZIP; E2E "no plugin request left this WordPress site"; trình duyệt thật chỉ gọi huggingface.co, `*.hf.co`, gravatar |
 | Phát hiện WebGPU thật/giả lập, shader-f16 → q4f16/q4 | yes | E2E + REAL MODEL (SwiftShader) | PARTIAL | `probe/candidates` trong worker; **GPU thật: NOT VERIFIED** |
-| Dự phòng WASM đa luồng (COOP/COEP chỉ trên trang plugin) | yes | REAL MODEL (Chromium) + E2E | DONE | real browser 23,9–29 phút/bài; E2E kiểm tra header và `crossOriginIsolated` |
-| Tải model, cache trình duyệt, tải lại từ cache | yes | REAL MODEL | DONE | real browser: tải lại 0,07–0,08 phút |
+| Dự phòng WASM đa luồng (COOP/COEP chỉ trên trang plugin) | yes | REAL MODEL (Chromium) + E2E | DONE | real browser 17,5–30,5 phút/bài; E2E kiểm tra header và `crossOriginIsolated` |
+| Tải model, cache trình duyệt, tải lại từ cache | yes | REAL MODEL | DONE | real browser: tải lại 0,04–0,08 phút |
 | Xoá cache model | yes | E2E (fake) | PARTIAL | `clearCache()`; xoá cache thật chưa đo |
 | Giải phóng bộ nhớ (unload + terminate Worker), tải lại | yes (0.3.0) | E2E | DONE | nút `#qlw-unload`; E2E "Qwen loads again after freeing memory" |
-| Viết theo phần: dàn ý → mở bài → 7 H2 (+H3) → kết luận, ~1.500 từ | yes | REAL MODEL | DONE | `writeArticle`; 6 lần chạy thật: 1.403–1.733 từ (CPU), 1.599–1.716 từ (Chromium) |
+| Viết theo phần: dàn ý → mở bài → 7 H2 (+H3) → kết luận, ~1.500 từ | yes | REAL MODEL | DONE | `writeArticle`; các lần chạy thật trong QWEN-TEST-REPORT: 1.403–1.806 từ (CPU), 1.599–1.776 từ (Chromium) |
 | Làm sạch: lặp câu/đoạn, chữ Hán, câu chatbot/meta, mục trộn lẫn, phần bị cắt, heading rác, tiền tố từ khóa H2, dòng nhắc tiêu đề | yes | UNIT (từ đầu ra thật) + REAL MODEL | DONE | `cleanPart/parseOutline/dropRepeats`; `core.test.mjs` (29) |
-| Prompt bài thuê xe: "THUÊ, không phải mua bán" | yes (0.3.0) | UNIT + REAL MODEL | PARTIAL | `contextBlock`; lần chạy 8–9: model 0.6B vẫn viết "người mua/mua xe" — QA đánh dấu để người biên tập sửa |
+| Prompt bài thuê xe: "THUÊ, không phải mua bán" | yes (0.3.0) | UNIT + REAL MODEL | PARTIAL | `contextBlock`; lần chạy 8–11: model 0.6B vẫn viết "người mua/mua xe" — QA đánh dấu để người biên tập sửa |
 | Nút Dừng thật sự dừng, giữ bản nháp | yes | UNIT + E2E | DONE | `InterruptableStoppingCriteria`; E2E "stop keeps the partial draft" |
 | Lưu khôi phục trong trình duyệt (cả khi đang stream), khôi phục sau tải lại | yes | E2E | DONE | `persist/persistThrottled`; E2E "reload during writing restores the streamed text" |
 | Worker sập → báo đúng, giữ nội dung | yes (0.3.0) | E2E (crash giả lập) | DONE | mã `WORKER_CRASHED`; E2E "a crashed Worker is reported as a crash" |
@@ -43,8 +43,8 @@ Cách đọc cột **Tested**:
 | Không ghi đè bài đã rời Nháp, bài không do plugin tạo, bài của người khác | yes (người khác: 0.3.0) | REAL WP | DONE | mã `not_draft`, 404, `not_owner` |
 | Markdown → block H2–H3/đoạn/danh sách, không H1, escape, `wp_kses_post` | yes | UNIT + REAL WP + E2E | DONE | `markdown.php` (18); block editor xác nhận mọi block hợp lệ |
 | Danh mục (kiểm tra `assign_term`) | yes | REAL WP | DONE | `wp-integration.php` |
-| QA kỹ thuật (ngưỡng 70) | yes | UNIT + REAL MODEL | DONE | `quality.php` (67); bài thật QA 85–100 |
-| Kiểm chứng dữ kiện (giá lệch brief theo mẫu xe, xe xăng gọi là xe điện, địa lý Hà Nội, mua/thuê, không cần cọc, khẳng định, đánh giá, nguồn, năm, trải nghiệm) | yes (0.3.0) | UNIT (câu thật) + chấm lại mẫu thật | PARTIAL | chỉ bắt mẫu sai đã biết; không thay được người kiểm chứng |
+| QA kỹ thuật (ngưỡng 70) | yes | UNIT + REAL MODEL | DONE | `quality.php` (67); bài thật QA 40–100 (lần 9 không đạt — đúng), lần 10–11 QA 75–100 |
+| Kiểm chứng dữ kiện (giá lệch brief theo mẫu xe, xe xăng gọi là xe điện, địa lý Hà Nội, mua/thuê, không cần cọc, khẳng định, đánh giá, nguồn, năm, trải nghiệm) | yes (0.3.0) | UNIT (câu thật) + REAL MODEL (lần 8–11) | PARTIAL | lần 11 bắt được giá Vision/Wave tráo, giá và link bịa; chỉ bắt mẫu sai đã biết; không thay được người kiểm chứng |
 | SEO: từ khóa, H2 nhồi từ khóa, độ dài tiêu đề, trùng tiêu đề/nội dung với bài đã có | yes (0.3.0) | UNIT + REAL WP | DONE | `Ajax::similar_posts`; tích hợp "copying an existing post is flagged" |
 | Biên tập (con người): ô xác nhận trong trình soạn bài, tự bỏ khi Qwen viết lại | yes (0.3.0) | REAL WP + E2E (block editor) | DONE | `save_editorial_review`; E2E "editorial sign-off is saved from the block editor metabox" |
 | Dữ kiện đã xác minh của cửa hàng + nút chèn vào brief | yes (0.3.0) | REAL WP + E2E | DONE | cài đặt `verified_facts`; E2E "insert button adds the verified facts" |

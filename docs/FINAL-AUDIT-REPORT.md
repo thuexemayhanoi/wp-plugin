@@ -2,7 +2,7 @@
 
 - Repository `thuexemayhanoi/wp-plugin`, nhánh `feat/qwen-local-no-paid-api`, Pull Request #1 (chưa merge, không triển khai production).
 - Mốc trước phiên audit này: `453325b` (0.2.0-beta).
-- Kết quả GitHub Actions và commit SHA cuối được ghi ở mục 8 và trong mô tả PR #1.
+- Mã đã kiểm thử: `5a0620a` (CI + model thật PASS). Commit cuối chỉ cập nhật tài liệu; SHA cuối ghi trong mô tả PR #1.
 - Bảng chức năng chi tiết: [FEATURE-INVENTORY.md](FEATURE-INVENTORY.md). Số đo model thật: [QWEN-TEST-REPORT.md](QWEN-TEST-REPORT.md).
 
 ## 1. Chức năng đã có trước phiên này (0.2.0-beta)
@@ -90,6 +90,9 @@ Kiểm thử trên GitHub Actions (chi tiết ở mục 8):
 
 | Kiểm thử | Kết quả |
 |---|---|
+| CI `5a0620a` (run 39920519352): PHP 8.1/8.3 lint + unit + build; WP 6.9.10/PHP 8.1; WP 7.1.3/PHP 8.3; WP 7.1.3/PHP 8.3 + WooCommerce + Yoast SEO + Rank Math | PASS (5/5 job; job phát hành theo tag bỏ qua vì không có tag) |
+| Model thật, lần chạy 11 (`5a0620a`, run 39920519362) | **PASS** — CPU: 1.480–1.738 từ, QA 75–100 (bắt được giá Vision/Wave tráo "700.000đ/tuần cho xe Honda Vision", giá 50.000đ bịa, link bịa); trình duyệt: 1.754 từ, 27,5 phút, nháp #5, QA 80 |
+| Model thật, lần chạy 10 (`fcaf19f`, run 39917543001) | **PASS** — CPU: 1.535–1.703 từ, QA 80–100; trình duyệt: 1.686 từ, 24,9 phút, nháp #5, QA 85 |
 | CI `97af80d` (run 39914553616): PHP 8.1/8.3 lint + unit + build; WP 6.9.10/PHP 8.1; WP 7.1.3/PHP 8.3 | PASS |
 | CI cùng WooCommerce 11.2.1 + Yoast SEO 28.7 + Rank Math 1.0.280 (WP 7.1.3/PHP 8.3) | PASS — tích hợp 68/68 (nhận diện Yoast, Rank Math), E2E 59/59, nâng/hạ phiên bản, gỡ cài đặt giữ 6 bản nháp, không có PHP Fatal |
 | Model thật, lần chạy 8 (`060f29b`, run 39913479875) | **PASS** — CPU: 1.432–1.669 từ, QA 80–100; trình duyệt: 1.664 từ, 17,5 phút, nháp #5, QA 80 |
@@ -124,6 +127,7 @@ Nên thử trên staging với một máy Chrome có GPU. Nếu chất lượng 
   - `8441df8`: lỗi trình bày từ lần chạy 7;
   - `97af80d`: E2E khi WooCommerce đổi hướng subscriber;
   - `fcaf19f`: sửa QA báo nhầm (phủ định, "deposits"), bỏ câu có số rác, tìm trùng theo cụm câu (lỗi 10–12);
-  - commit tiếp theo: sửa 2 cảnh báo nhầm từ bài trình duyệt của lần chạy 9 (lỗi 13).
+  - `5a0620a`: sửa 2 cảnh báo nhầm từ bài trình duyệt của lần chạy 9 (lỗi 13) — CI và lần chạy thật 11 PASS;
+  - commit cuối: chỉ cập nhật tài liệu (số liệu lần chạy 10–11).
 - Lần chạy 9 FAIL là kết quả thật. Model viết một bài sai giá và bịa trải nghiệm, QA chặn đúng (dưới 70 → nháp gắn nhãn cần sửa). Ngưỡng 70 **không** bị nới. Phần báo nhầm của QA đã được sửa.
 - Kết quả CI và lần chạy model thật cho commit cuối cùng được ghi trong mô tả PR #1. Vì mẫu sinh ngẫu nhiên, một lần chạy sau có thể đạt hoặc không đạt: đó là đo chất lượng model, không phải lỗi phần mềm.
