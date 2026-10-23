@@ -198,4 +198,10 @@ foreach (['Mình đã thuê xe ở đây ba lần.', 'Hôm qua mình đã thử 
     check(in_array('experience', $failed_ids(Quality::assess(vi_article(8, 7, $line), 1500, 'vi')), true), 'first-person experience still flagged: ' . $line);
 }
 
+// Run 39949306000: "không bắt buộc phải mua xe" is a correct statement; "Thời gian mua xe:" is not.
+$modal = Quality::assess(vi_article(8, 7, 'Việc lựa chọn được xe phù hợp giúp tiết kiệm thời gian và tiền bạc, đặc biệt khi không bắt buộc phải mua xe hoặc sử dụng xe máy để làm việc.'), 1500, 'vi', '', '', $rental);
+check(!in_array('rent-buy', $failed_ids($modal), true), '"không bắt buộc phải mua xe" is not a rent/buy mix-up');
+$label = Quality::assess(vi_article(8, 7, 'Thời gian mua xe: Không phải mua mà thuê, với giá tham khảo như trên.'), 1500, 'vi', '', '', $rental);
+check(in_array('rent-buy', $failed_ids($label), true), '"Thời gian mua xe:" in a rental article is still flagged');
+
 finish('Quality');

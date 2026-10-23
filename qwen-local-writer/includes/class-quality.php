@@ -240,7 +240,9 @@ final class Quality {
                     // "không phải mua xe mà là thuê", "instead of buying a bike" state the difference correctly (run 39914553591).
                     // Last 16 characters before the match (byte slicing could split a Vietnamese letter).
                     $before = mb_substr(substr($s, 0, $offset), -16);
-                    if (!preg_match('/' . self::WB . '(?:không|chẳng|thay\s+vì|instead\s+of|rather\s+than|not|no\s+need|without)' . self::WE . '/iu', $before)) {
+                    // "không bắt buộc phải mua xe" (run 39949306000): the negation is further away behind modal words.
+                    $modal = preg_match('/' . self::WB . '(?:không|chẳng)(?:\s+(?:cần|phải|bắt\s+buộc|nhất\s+thiết)){1,3}\s+$/iu', mb_substr(substr($s, 0, $offset), -32));
+                    if (!$modal && !preg_match('/' . self::WB . '(?:không|chẳng|thay\s+vì|instead\s+of|rather\s+than|not|no\s+need|without)' . self::WE . '/iu', $before)) {
                         return true;
                     }
                 }

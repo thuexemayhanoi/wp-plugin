@@ -275,6 +275,17 @@ const META_LINE_RE = new RegExp([
 ].join('|'), 'iu');
 
 const ZEROS_RE = /(?<![\p{N}.,])0{4,}(?![\p{N}])/u;
+// Invented details Qwen3-0.6B keeps writing although the system prompt forbids them (real runs 39914553591,
+// 39917543001, 39949306000). Mirrors the "experience" and "no-deposit" fact checks in includes/class-quality.php.
+const EXPERIENCE_RE = /(?<![\p{L}\p{N}])(?:(?<!chúng\s+)tôi\s+đã|theo\s+kinh\s+nghiệm\s+của\s+(?:tôi|mình)|bản\s+thân\s+(?:tôi|mình)|mình\s+đã\s+(?:từng\s+)?(?:thuê|đi|dùng|sử\s+dụng|thử|trải\s+nghiệm|chạy|lái|ghé|đến|tới)|i\s+have\s+(?:tried|rented|used|visited)|in\s+my\s+(?:own\s+)?experience)(?![\p{L}\p{N}])|^[^\p{L}]*mình\s+đã(?![\p{L}\p{N}])/iu;
+const NO_DEPOSIT_RE = /(?<![\p{L}\p{N}])(?:(?:không\s+cần|miễn(?:\s+phí)?|không\s+phải|không\s+yêu\s+cầu|không\s+mất)\s+(?:tiền\s+)?(?:đặt\s+)?cọc|no\s+deposit|without\s+(?:a\s+)?deposit|deposit[- ]free)(?![\p{L}\p{N}])/iu;
+const NO_DEPOSIT_FACT = String.raw`(?:không\s+cần\s+(?:đặt\s+)?cọc|miễn\s+cọc|no\s+deposit)`;
+
+/** Only facts that affirm it ("Xe X không cần đặt cọc") allow a no-deposit sentence; "Không quảng cáo … không cần đặt cọc" does not. */
+export function factsAllowNoDeposit(facts = '') {
+  return new RegExp(NO_DEPOSIT_FACT, 'iu').test(facts)
+    && !new RegExp(String.raw`(?:không|đừng|chớ|do\s+not|don't|never)\s+(?:được\s+)?(?:quảng\s+cáo|hứa|advertise|promise)[^.\n]{0,40}` + NO_DEPOSIT_FACT, 'iu').test(facts);
+}
 
 const sentenceKey = value => value.toLowerCase().replace(/[^\p{L}\p{N} ]+/gu, ' ').replace(/\s+/g, ' ').trim();
 
@@ -316,7 +327,7 @@ const CHATBOT_RE = /[^.!?\n]*(?:let me know|feel free to (?:ask|reach out)|i hop
  * - stops at the first line that starts another outline section ("bleed");
  * - removes Chinese drift and a fragment cut off by the token limit.
  */
-export function cleanPart(text, { heading = '', title = '', others = [], allowSubheadings = true } = {}) {
+export function cleanPart(text, { heading = '', title = '', others = [], allowSubheadings = true, facts = '' } = {}) {
   const warnings = [];
   const value0 = stripThinking(text)
     .replace(/\r\n?/g, '\n')
@@ -374,6 +385,24 @@ export function cleanPart(text, { heading = '', title = '', others = [], allowSu
       .map(line => ZEROS_RE.test(line) ? line.split(/(?<=[.!?…])\s+/u).filter(sentence => !ZEROS_RE.test(sentence)).join(' ') : line)
       .join('\n').replace(/\n{3,}/g, '\n\n').trim();
   }
+
+  // A first-person story ("tôi đã thuê…") or a "no deposit" promise the facts do not make is dropped; the PHP
+  // fact check still reports whatever is left. Hà Nội and Long Biên are never a "thị trấn".
+  const noDeposit = factsAllowNoDeposit(facts);
+  const invented = sentence => (EXPERIENCE_RE.test(sentence) && 'invented-experience')
+    || (!noDeposit && NO_DEPOSIT_RE.test(sentence) && 'no-deposit-promise') || '';
+  value = value.split('\n').map(line => {
+    if (/^\s*###\s/.test(line)) return line;
+    return line.split(/(?<=[.!?…])\s+/u).filter(sentence => {
+      const reason = invented(sentence);
+      if (reason) warnings.push(reason);
+      return !reason;
+    }).join(' ');
+  }).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  value = value.replace(/(?<![\p{L}\p{N}])thị\s+trấn\s+(?=(?:hà\s+nội|long\s+biên)(?![\p{L}\p{N}]))/giu, () => {
+    warnings.push('geography-fixed');
+    return '';
+  });
 
   const foreign = (value.match(FOREIGN_SCRIPT_RE) || []).length;
   if (foreign) {
@@ -470,7 +499,7 @@ export async function writeArticle({ input, generate, onProgress = () => {}, sho
     return chosen;
   };
   const part = async (messages, words, heading, allowSubheadings) => {
-    const options = { heading, title: input.title, others: headings.filter(h => h !== heading), allowSubheadings };
+    const options = { heading, title: input.title, facts: input.facts, others: headings.filter(h => h !== heading), allowSubheadings };
     let cleaned = prepare(await call(messages, words), options);
     const weak = c => c.words < words * 0.45 || c.warnings.includes('foreign-script');
     if (!stopped && weak(cleaned)) {
@@ -482,7 +511,7 @@ export async function writeArticle({ input, generate, onProgress = () => {}, sho
     stats.warnings.push(...cleaned.warnings.map(w => `${heading || 'intro/conclusion'}: ${w}`));
     return commit(cleaned);
   };
-  const extend = (text, heading) => commit(prepare(text, { heading, title: input.title, others: headings.filter(h => h !== heading) }));
+  const extend = (text, heading) => commit(prepare(text, { heading, title: input.title, facts: input.facts, others: headings.filter(h => h !== heading) }));
 
   try {
     progress('outline', { message: vi ? 'Đang lập dàn ý H2…' : 'Creating the H2 outline…' });

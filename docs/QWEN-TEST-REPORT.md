@@ -150,6 +150,14 @@ Chromium/WASM: **1.754 từ, 8 H2, 27,5 phút**, 1,5 token/s, 10 lần gọi, 2.
 `https://www.longben.com/` (−5), 3 câu mua/thuê (−10), thiếu nguyên văn từ khóa (−5). Không còn báo nhầm "giá trước tên xe" hay "mình".
 Tải lại từ cache 0,04 phút; chỉ liên hệ Hugging Face + gravatar.
 
+### 2.13 Lần chạy 12 (run 39949306000, commit 035a914 — mã giống 5a0620a) — FAIL (đúng)
+CPU: vi-brief **1.706 từ / QA 60 → không đạt**; en-brief 1.467 / 85; vi-general 1.541 / 100; en-general 1.513 / 95.
+Bài vi-brief có lỗi thật: "Trong thị trấn Hà Nội…" (−10), hứa "không cần đặt cọc" chép sai từ dòng "Không quảng cáo … không cần
+đặt cọc" của brief (−15), 3 câu "tôi đã…" bịa trải nghiệm (−10), 2 câu mua/thuê (−5; một câu là báo nhầm: "không bắt buộc phải mua
+xe" nói đúng). Câu bịa "tôi đã…" xuất hiện ở các lần 9, 10, 12 dù prompt đã cấm, nên bước làm sạch nay **bỏ hẳn** câu kể trải
+nghiệm ngôi thứ nhất và câu hứa miễn cọc không có trong brief, sửa "thị trấn Hà Nội/Long Biên"; QA vẫn chấm phần còn lại với
+ngưỡng 70 không đổi. Kết quả cho mã mới được ghi ở mục kế tiếp sau khi chạy model thật.
+
 ### 2.8 0.3.0-beta: chấm lại bài thật bằng QA mới (kiểm chứng dữ kiện + SEO)
 Cùng các bài gốc trong `docs/qwen-samples/`, cùng brief như CI, chấm bằng QA 0.3.0 (không chạy lại model):
 
@@ -169,9 +177,9 @@ Lần chạy model thật cho commit 0.3.0-beta cuối (prompt "THUÊ, không ph
 
 | Bộ kiểm thử | Kết quả cục bộ |
 |---|---|
-| `php tests/quality.php` (QA, gồm câu và bài thật bị lỗi) | 67/67 |
+| `php tests/quality.php` (QA, gồm câu và bài thật bị lỗi) | 69/69 |
 | `php tests/markdown.php` (Markdown → block) | 18/18 |
-| `node --test tests/js/*.test.mjs` (điều phối, Worker, lỗi thật của Qwen) | 29/29 |
+| `node --test tests/js/*.test.mjs` (điều phối, Worker, lỗi thật của Qwen) | 30/30 |
 | `wp eval-file tests/wp-integration.php` (WP 7.1.3 + SQLite, cùng plugin cũ 1.2.0) | 66/66 (CI có Yoast + Rank Math: 68/68) |
 | `tests/rollback.sh` (0.3.0-beta ↔ 0.2.0-beta, dữ liệu giữ nguyên) | PASS |
 | `tests/e2e/admin-ui.e2e.cjs` (Chromium, model giả, cùng plugin cũ) | 59/59 |

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {
   dropRepeats, introMessages,
   countWords, parseOutline, cleanPart, writeArticle, articlePlan, tokenBudget, normalizeInput,
-  outlineMessages, sectionMessages, systemPrompt, classifyError, explainError, foreignScriptRatio, MODEL,
+  outlineMessages, sectionMessages, systemPrompt, classifyError, explainError, foreignScriptRatio, MODEL, factsAllowNoDeposit,
 } from '../../assets/qlw-core.js';
 
 const input = normalizeInput({ title: 'Kinh nghiệm thuê xe máy ở Hà Nội', keyword: 'thuê xe máy', facts: 'Honda Vision 200.000đ/ngày', language: 'vi' });
@@ -307,6 +307,34 @@ test('real run 39914553591: a sentence with a garbage "000000000đ" price is dro
   assert.equal(out.text, 'Honda Wave là lựa chọn phổ biến. Hãy xác nhận giá trước khi đặt.');
   assert.ok(out.warnings.includes('garbage-number'));
   assert.equal(cleanPart('Honda Vision 200.000đ/ngày, cọc 4–5 triệu.').text, 'Honda Vision 200.000đ/ngày, cọc 4–5 triệu.');
+});
+
+test('real runs 39917543001 / 39949306000: invented first-person stories and "no deposit" promises are dropped', () => {
+  const nap = 'Tiền đặt cọc từ 2.000.000đ đến 5.000.000đ tùy dòng xe. Không quảng cáo mặc định là cho thuê xe không cần đặt cọc.';
+  const keep = 'Honda Wave có giá tham khảo 150.000đ/ngày.';
+  const out = cleanPart([
+    `Trong một buổi làm việc ở Hà Nội, tôi đã tìm thấy một địa điểm lý tưởng để thuê xe máy. ${keep}`,
+    'Tôi đã tham khảo một cặp đôi đã từng thuê xe máy tại đây.',
+    'Không cần quảng cáo và không cần đặt cọc, đó là một ưu điểm nổi bật để khách hàng chú ý.',
+    'Trong thị trấn Hà Nội, việc thuê xe máy là một lựa chọn phổ biến.',
+  ].join('\n\n'), { facts: nap });
+  assert.equal(out.text, `${keep}\n\nTrong Hà Nội, việc thuê xe máy là một lựa chọn phổ biến.`);
+  for (const warning of ['invented-experience', 'no-deposit-promise', 'geography-fixed']) assert.ok(out.warnings.includes(warning), warning);
+
+  // Not first-person experience: the shop speaking ("chúng tôi"), reflexive "mình" (run 39914553591), a general tip.
+  for (const sentence of [
+    'Hãy liên hệ qua số điện thoại hoặc Zalo mà chúng tôi đã giới thiệu.',
+    'Các cửa hàng và đại lý chuyên môn nên đảm bảo rằng mình đã cập nhật đầy đủ các thông tin về giá cả.',
+    'Nếu bạn không có thời gian, hãy tập trung vào những công cụ hiệu quả mà mình đã có.',
+  ]) assert.equal(cleanPart(sentence).text, sentence);
+  assert.equal(cleanPart('Mình đã thuê chiếc Vision này ba lần. Xe chạy êm.').text, 'Xe chạy êm.');
+  assert.equal(cleanPart('In my experience, the Vision is easy to ride. Check the brakes.').text, 'Check the brakes.');
+
+  // Facts that really say there is no deposit keep the sentence.
+  assert.ok(factsAllowNoDeposit('Xe đạp điện không cần đặt cọc khi thuê theo giờ.'));
+  assert.ok(!factsAllowNoDeposit(nap));
+  const promise = 'Xe đạp điện không cần đặt cọc khi thuê theo giờ.';
+  assert.equal(cleanPart(promise, { facts: promise }).text, promise);
 });
 
 test('rental articles tell the model it is about renting, not buying (real runs wrote "người mua")', () => {
