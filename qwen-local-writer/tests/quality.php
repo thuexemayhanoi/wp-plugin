@@ -212,4 +212,12 @@ check(!in_array('price-mismatch', $failed_ids($vi_after), true), '"4–5 triệu
 $still = Quality::assess(vi_article(8, 7, 'Honda Wave 200.000đ/ngày và cọc 2 triệu.'), 1500, 'vi', $nguyen_tu, '', $rental);
 check(in_array('price-mismatch', $failed_ids($still), true), 'a wrong price followed by "và cọc …" is still caught');
 
+// Run 39956888841: "chúng tôi đã tổng hợp/sẵn sàng" is the shop speaking; "chúng tôi đã thử", "tôi rất hài lòng" are experience.
+foreach (['Với địa chỉ 112 Nguyễn Văn Cừ, Bồ Đề, Long Biên, Hà Nội, chúng tôi đã sẵn sàng hỗ trợ bạn và có thể tư vấn chi tiết về các dịch vụ này.', 'Chúng tôi đã tổng hợp các thông tin chính như sau.'] as $line) {
+    check(!in_array('experience', $failed_ids(Quality::assess(vi_article(8, 7, $line), 1500, 'vi')), true), 'the shop speaking is not an invented experience: ' . mb_substr($line, 0, 40));
+}
+foreach (['Chúng tôi đã thử chiếc Vision này trên đường đèo.', 'Giá cả hợp lý, điều này khiến tôi rất hài lòng.'] as $line) {
+    check(in_array('experience', $failed_ids(Quality::assess(vi_article(8, 7, $line), 1500, 'vi')), true), 'an invented experience is flagged: ' . mb_substr($line, 0, 40));
+}
+
 finish('Quality');

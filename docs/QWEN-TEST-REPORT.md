@@ -2,12 +2,12 @@
 
 Ngày: 2026-10-23 · Nhánh `feat/qwen-local-no-paid-api` · PR #1
 
-## Tóm tắt (lần chạy model thật mới nhất: lần 13, run 39950921303, commit f66e118 — PASS)
+## Tóm tắt (lần chạy model thật đã ghi: lần 14, run 39956888841, commit 129ccaa — PASS; kết quả commit cuối ở PR #1)
 
 | Kiểm thử | Kết quả |
 |---|---|
-| 4 bài VI/EN, Qwen3-0.6B thật, CPU (Node + onnxruntime-node), mã điều phối của plugin, QA 0.3.0 | 1.520–1.600 từ, 6–8 H2, **QA 80–100**, 90–139 giây/bài |
-| 1 bài VI trong Chromium qua giao diện plugin thật (WASM q4, không GPU) → lưu nháp WordPress | **1.630 từ, 17,7 phút, nháp #5, QA 85**, tải lại model từ cache 0,04 phút |
+| 4 bài VI/EN, Qwen3-0.6B thật, CPU (Node + onnxruntime-node), mã điều phối của plugin, QA 0.3.0 | 1.513–1.921 từ, 8 H2, **QA 70–95**, 172–305 giây/bài |
+| 1 bài VI trong Chromium qua giao diện plugin thật (WASM q4, không GPU) → lưu nháp WordPress | **1.674 từ, 39,2 phút, nháp #5, QA 85**, tải lại model từ cache 0,08 phút |
 | Máy chủ trình duyệt liên hệ | chỉ `huggingface.co`, `us.aws.cdn.hf.co`, `secure.gravatar.com` (WordPress) |
 | Plugin trên WordPress sạch 6.9.10/PHP 8.1, 7.1.3/PHP 8.3 và 7.1.3/PHP 8.3 + WooCommerce/Yoast/Rank Math (MySQL 8, cùng plugin cũ 1.2.0) | tích hợp 66/66 (68/68 khi có Yoast + Rank Math), E2E 59/59, nâng/hạ phiên bản, gỡ cài đặt giữ bài |
 
@@ -166,6 +166,17 @@ vi-general 1.520 / 100; en-general 1.555 / 100. Không còn câu "tôi đã…" 
 Chromium/WASM: **1.630 từ, 17,7 phút**, 2,1 token/s, 9 lần gọi, nháp #5, **QA 85**: 3 câu "người mua" (lỗi thật), thiếu nguyên văn
 từ khóa. Tải lại từ cache 0,04 phút.
 
+### 2.15 Lần chạy 14 (run 39956888841, commit 129ccaa) — PASS
+CPU: vi-brief 1.683 / **QA 70** (vừa đạt): dòng in đậm "Trung tâm: Không quảng cáo, không cần đặt cọc" (chép sai từ brief) lọt qua
+bước làm sạch vì dòng in đậm được đổi thành H3 và H3 không được kiểm tra (**lỗi #16**); "chúng tôi đã sẵn sàng hỗ trợ bạn" bị trừ
+10 điểm "bịa trải nghiệm" dù đó là lời cửa hàng (**báo nhầm**, cũng lỗi #16); "từ 2–5 triệu đồng mỗi ngày… khiến tôi rất hài lòng
+… trước khi đặt mua" (sai thật: tiền cọc thành giá ngày, "tôi rất hài lòng" — QA chỉ bắt được "đặt mua"). en-brief 1.582 / 90 ("200k"
+không có trong brief, thiếu từ khóa); vi-general 1.921 / 90 (từ khóa dày 3,6%); en-general 1.513 / 95.
+Chromium/WASM: **1.674 từ, 7 H2, 39,2 phút** (1,2 token/s, 2 lần viết lại), nháp #5, **QA 85**: "chúng tôi đã tổng hợp các thông tin"
+(báo nhầm, lỗi #16) và "không phải mua hoặc bán xe" (câu đúng nhưng bị đánh dấu).
+Sau lần chạy này: H3 cũng được kiểm tra; "chúng tôi đã …" chỉ tính là trải nghiệm khi đi với động từ trải nghiệm (thuê, thử,
+kiểm tra…); "tôi (rất) hài lòng" được tính là trải nghiệm. Ngưỡng 70 không đổi.
+
 ### 2.8 0.3.0-beta: chấm lại bài thật bằng QA mới (kiểm chứng dữ kiện + SEO)
 Cùng các bài gốc trong `docs/qwen-samples/`, cùng brief như CI, chấm bằng QA 0.3.0 (không chạy lại model):
 
@@ -185,7 +196,7 @@ Lần chạy model thật cho commit 0.3.0-beta cuối (prompt "THUÊ, không ph
 
 | Bộ kiểm thử | Kết quả cục bộ |
 |---|---|
-| `php tests/quality.php` (QA, gồm câu và bài thật bị lỗi) | 72/72 |
+| `php tests/quality.php` (QA, gồm câu và bài thật bị lỗi) | 76/76 |
 | `php tests/markdown.php` (Markdown → block) | 18/18 |
 | `node --test tests/js/*.test.mjs` (điều phối, Worker, lỗi thật của Qwen) | 30/30 |
 | `wp eval-file tests/wp-integration.php` (WP 7.1.3 + SQLite, cùng plugin cũ 1.2.0) | 66/66 (CI có Yoast + Rank Math: 68/68) |

@@ -284,7 +284,7 @@ final class Quality {
         $flag('source', $sources, 'Dẫn nghiên cứu/thống kê/chuyên gia không có nguồn thật.');
         $check('factual', 'sources', !$sources, 10, $sources ? sprintf('%d câu dẫn nghiên cứu/thống kê không có nguồn.', count($sources)) : 'Không dẫn nguồn không có thật.');
 
-        $personal = self::matching($sentences, static fn (string $s): bool => (bool) preg_match('/' . self::WB . '(?:tôi\s+đã|chúng\s+tôi\s+đã|^\W*mình\s+đã|mình\s+đã\s+(?:từng\s+)?(?:thuê|đi|dùng|sử\s+dụng|thử|trải\s+nghiệm|chạy|lái|ghé|đến|tới)|theo\s+kinh\s+nghiệm\s+của\s+(?:tôi|mình)|bản\s+thân\s+(?:tôi|mình)|i\s+have\s+(?:tried|rented|used|visited)|in\s+my\s+(?:own\s+)?experience|we\s+(?:have\s+)?tested)' . self::WE . '/iu', $s));
+        $personal = self::matching($sentences, static fn (string $s): bool => (bool) preg_match('/' . self::WB . '(?:(?<!chúng\s)tôi\s+đã|(?<!chúng\s)tôi\s+(?:rất\s+|cảm\s+thấy\s+)?hài\s+lòng|chúng\s+tôi\s+đã\s+(?:từng\s+)?(?:thuê|đi|dùng|sử\s+dụng|thử|trải\s+nghiệm|chạy|lái|ghé|đến|tới|kiểm\s+tra)|^\W*mình\s+đã|mình\s+đã\s+(?:từng\s+)?(?:thuê|đi|dùng|sử\s+dụng|thử|trải\s+nghiệm|chạy|lái|ghé|đến|tới)|theo\s+kinh\s+nghiệm\s+của\s+(?:tôi|mình)|bản\s+thân\s+(?:tôi|mình)|i\s+have\s+(?:tried|rented|used|visited)|in\s+my\s+(?:own\s+)?experience|we\s+(?:have\s+)?tested)' . self::WE . '/iu', $s));
         $flag('experience', $personal, 'Kể trải nghiệm cá nhân — AI không có trải nghiệm thật.');
         $check('factual', 'experience', !$personal, 10, $personal ? sprintf('%d câu kể trải nghiệm cá nhân (AI không có trải nghiệm thật) — sửa hoặc xóa.', count($personal)) : 'Không bịa trải nghiệm cá nhân.');
 

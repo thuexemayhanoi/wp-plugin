@@ -328,6 +328,12 @@ test('real runs 39917543001 / 39949306000: invented first-person stories and "no
     'Nếu bạn không có thời gian, hãy tập trung vào những công cụ hiệu quả mà mình đã có.',
   ]) assert.equal(cleanPart(sentence).text, sentence);
   assert.equal(cleanPart('Mình đã thuê chiếc Vision này ba lần. Xe chạy êm.').text, 'Xe chạy êm.');
+  assert.equal(cleanPart('Chúng tôi đã tổng hợp các thông tin chính như sau. Chúng tôi đã thử chiếc Vision trên đường đèo. Giá cả hợp lý, điều này khiến tôi rất hài lòng.').text,
+    'Chúng tôi đã tổng hợp các thông tin chính như sau.');
+  // Run 39956888841: the brief line copied as a bold line, which becomes an H3.
+  const bold = cleanPart(`${keep}\n\n**Trung tâm: Không quảng cáo, không cần đặt cọc**\n\n${keep.replace('Wave', 'Vision').replace('150', '200')}`, { facts: nap });
+  assert.doesNotMatch(bold.text, /đặt cọc/);
+  assert.ok(bold.warnings.includes('no-deposit-promise'));
   assert.equal(cleanPart('In my experience, the Vision is easy to ride. Check the brakes.').text, 'Check the brakes.');
 
   // Facts that really say there is no deposit keep the sentence.

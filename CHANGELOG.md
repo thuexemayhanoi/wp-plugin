@@ -11,7 +11,8 @@
 - **Dữ kiện đã xác minh của cửa hàng** (cài đặt quản trị) + nút chèn vào brief khi cần.
 - **Sau lần chạy thật 12**: bản nháp tự bỏ câu bịa trải nghiệm ("tôi đã tìm thấy…", "theo kinh nghiệm của tôi", "In my experience") và câu hứa "không cần đặt cọc" khi brief không xác nhận (kể cả brief ghi "Không quảng cáo … không cần đặt cọc"); "thị trấn Hà Nội/Long Biên" thành "Hà Nội/Long Biên". "Chúng tôi đã…" (lời cửa hàng) và "rằng mình đã…" được giữ. QA vẫn kiểm tra như cũ phần còn sót và không còn báo nhầm "không bắt buộc phải mua xe".
 - **Sau lần chạy thật 13**: số tiền có "cọc/deposit" ngay sau ("a 3 million VND deposit", "4–5 triệu tiền cọc") được hiểu là tiền cọc, không còn bị báo "giá lệch brief".
-- **Kiểm thử**: QA 72, JS 30, tích hợp WordPress 66, E2E 59 (thêm: Worker sập, tải lại giữa chừng, giải phóng bộ nhớ, chèn dữ kiện, xác nhận biên tập qua block editor), `tests/rollback.sh` (0.3.0-beta ↔ 0.2.0-beta), CI chạy thêm cùng WooCommerce + Yoast SEO + Rank Math.
+- **Sau lần chạy thật 14**: làm sạch kiểm tra cả dòng in đậm đã thành H3 (bỏ "Trung tâm: Không quảng cáo, không cần đặt cọc"); "chúng tôi đã tổng hợp/sẵn sàng hỗ trợ" (lời cửa hàng) không còn bị tính là bịa trải nghiệm, còn "chúng tôi đã thử/thuê/kiểm tra…" và "tôi rất hài lòng" thì có.
+- **Kiểm thử**: QA 76, JS 30, tích hợp WordPress 66, E2E 59 (thêm: Worker sập, tải lại giữa chừng, giải phóng bộ nhớ, chèn dữ kiện, xác nhận biên tập qua block editor), `tests/rollback.sh` (0.3.0-beta ↔ 0.2.0-beta), CI chạy thêm cùng WooCommerce + Yoast SEO + Rank Math.
 
 ## Qwen Local Writer 0.2.0-beta — 2026-10-23 (plugin riêng trong `qwen-local-writer/`)
 - Bỏ import thư viện từ CDN: Transformers.js 4.3.1 + ONNX Runtime Web 1.31.0-dev được đóng gói trong ZIP, lấy từ npm và kiểm tra sha512/sha256 (`scripts/vendor_qwen_deps.py`, `assets/vendor/manifest.json`).

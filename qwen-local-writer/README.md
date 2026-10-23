@@ -153,7 +153,7 @@ bắt được những mẫu sai đã biết và các con số không có trong 
 
 ```bash
 python3 scripts/vendor_qwen_deps.py            # lấy runtime từ npm, kiểm tra hash
-php qwen-local-writer/tests/quality.php        # QA (72 kiểm tra, dựng từ lỗi thật của Qwen)
+php qwen-local-writer/tests/quality.php        # QA (76 kiểm tra, dựng từ lỗi thật của Qwen)
 php qwen-local-writer/tests/markdown.php       # Markdown → block an toàn (18)
 node --test qwen-local-writer/tests/js/*.test.mjs   # điều phối bài viết + Worker + lỗi thật của Qwen (29)
 python3 scripts/build_qwen.py                  # dist/qwen-local-writer.zip

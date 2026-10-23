@@ -277,7 +277,7 @@ const META_LINE_RE = new RegExp([
 const ZEROS_RE = /(?<![\p{N}.,])0{4,}(?![\p{N}])/u;
 // Invented details Qwen3-0.6B keeps writing although the system prompt forbids them (real runs 39914553591,
 // 39917543001, 39949306000). Mirrors the "experience" and "no-deposit" fact checks in includes/class-quality.php.
-const EXPERIENCE_RE = /(?<![\p{L}\p{N}])(?:(?<!chúng\s+)tôi\s+đã|theo\s+kinh\s+nghiệm\s+của\s+(?:tôi|mình)|bản\s+thân\s+(?:tôi|mình)|mình\s+đã\s+(?:từng\s+)?(?:thuê|đi|dùng|sử\s+dụng|thử|trải\s+nghiệm|chạy|lái|ghé|đến|tới)|i\s+have\s+(?:tried|rented|used|visited)|in\s+my\s+(?:own\s+)?experience)(?![\p{L}\p{N}])|^[^\p{L}]*mình\s+đã(?![\p{L}\p{N}])/iu;
+const EXPERIENCE_RE = /(?<![\p{L}\p{N}])(?:(?<!chúng\s+)tôi\s+đã|(?<!chúng\s+)tôi\s+(?:rất\s+|cảm\s+thấy\s+)?hài\s+lòng|chúng\s+tôi\s+đã\s+(?:từng\s+)?(?:thuê|đi|dùng|sử\s+dụng|thử|trải\s+nghiệm|chạy|lái|ghé|đến|tới|kiểm\s+tra)|theo\s+kinh\s+nghiệm\s+của\s+(?:tôi|mình)|bản\s+thân\s+(?:tôi|mình)|mình\s+đã\s+(?:từng\s+)?(?:thuê|đi|dùng|sử\s+dụng|thử|trải\s+nghiệm|chạy|lái|ghé|đến|tới)|i\s+have\s+(?:tried|rented|used|visited)|in\s+my\s+(?:own\s+)?experience)(?![\p{L}\p{N}])|^[^\p{L}]*mình\s+đã(?![\p{L}\p{N}])/iu;
 const NO_DEPOSIT_RE = /(?<![\p{L}\p{N}])(?:(?:không\s+cần|miễn(?:\s+phí)?|không\s+phải|không\s+yêu\s+cầu|không\s+mất)\s+(?:tiền\s+)?(?:đặt\s+)?cọc|no\s+deposit|without\s+(?:a\s+)?deposit|deposit[- ]free)(?![\p{L}\p{N}])/iu;
 const NO_DEPOSIT_FACT = String.raw`(?:không\s+cần\s+(?:đặt\s+)?cọc|miễn\s+cọc|no\s+deposit)`;
 
@@ -387,12 +387,16 @@ export function cleanPart(text, { heading = '', title = '', others = [], allowSu
   }
 
   // A first-person story ("tôi đã thuê…") or a "no deposit" promise the facts do not make is dropped; the PHP
-  // fact check still reports whatever is left. Hà Nội and Long Biên are never a "thị trấn".
+  // fact check still reports whatever is left; an H3 made from a bold line is checked too. Hà Nội and Long Biên are never a "thị trấn".
   const noDeposit = factsAllowNoDeposit(facts);
   const invented = sentence => (EXPERIENCE_RE.test(sentence) && 'invented-experience')
     || (!noDeposit && NO_DEPOSIT_RE.test(sentence) && 'no-deposit-promise') || '';
   value = value.split('\n').map(line => {
-    if (/^\s*###\s/.test(line)) return line;
+    if (/^\s*###\s/.test(line)) {
+      const reason = invented(line.replace(/^\s*###\s+/, ''));
+      if (reason) warnings.push(reason);
+      return reason ? '' : line;
+    }
     return line.split(/(?<=[.!?…])\s+/u).filter(sentence => {
       const reason = invented(sentence);
       if (reason) warnings.push(reason);
