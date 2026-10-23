@@ -11,3 +11,5 @@
 /vendor/bin/
 /coverage/
 /wp-config.php
+# Qwen Local Writer runtime: fetched from npm by scripts/vendor_qwen_deps.py (manifest.json is committed)
+/qwen-local-writer/assets/vendor/*/

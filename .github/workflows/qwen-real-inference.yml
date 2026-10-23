@@ -1,0 +1,92 @@
+name: Qwen real inference (VI/EN ~1,500 words)
+# Downloads the real Qwen3-0.6B ONNX weights (pinned revision) from Hugging Face and
+# writes complete articles with the plugin's own code. Runs when generation code changes.
+on:
+  pull_request:
+    paths:
+      - 'qwen-local-writer/assets/**'
+      - 'qwen-local-writer/includes/class-quality.php'
+      - 'qwen-local-writer/tests/e2e/real-*'
+      - '.github/workflows/qwen-real-inference.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: qwen-real-${{ github.ref }}
+  # Real-model runs are long and are the evidence for releases: queue new ones, never cancel a running one.
+  cancel-in-progress: false
+jobs:
+  node-cpu:
+    name: Real Qwen3 on CPU (onnxruntime-node) — 4 articles VI/EN, q4f16 + q4
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring
+          tools: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Transformers.js for Node (test harness only)
+        run: npm i --no-save --no-audit --no-fund @huggingface/transformers@4.3.1
+      - name: Generate and score articles with the real model
+        run: node qwen-local-writer/tests/e2e/real-node-generate.mjs dist/qwen-real
+      - name: Upload articles and QA report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qwen-real-node-articles
+          path: dist/qwen-real
+          retention-days: 30
+
+  browser-wasm:
+    name: Real Qwen3 in Chromium through the plugin UI (WASM, no GPU on runner)
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: --health-cmd="mysqladmin ping -proot" --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      WP_PATH: /tmp/wordpress
+      WP_URL: http://localhost:8881
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, mysqli, zip
+          tools: wp-cli
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: WordPress 7.1.3 + Qwen ZIP
+        run: |
+          python3 scripts/build_qwen.py
+          wp core download --version=7.1.3 --path=$WP_PATH
+          wp config create --path=$WP_PATH --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1 --skip-check
+          wp core install --path=$WP_PATH --url=$WP_URL --title="QLW real" --admin_user=admin --admin_password=admin-pass-123 --admin_email=admin@example.com --skip-email
+          wp plugin install dist/qwen-local-writer.zip --activate --path=$WP_PATH
+      - name: Chromium
+        run: |
+          npm i --no-save --no-audit --no-fund playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Write a Vietnamese article in the browser and save it as a draft
+        run: |
+          (cd $WP_PATH && PHP_CLI_SERVER_WORKERS=4 php -S localhost:8881 > /tmp/php-server.log 2>&1 &)
+          sleep 2
+          WP_CLI="wp --path=$WP_PATH" DEVICE=wasm LANGUAGE=vi E2E_OUT=dist/qwen-real-browser node qwen-local-writer/tests/e2e/real-browser.e2e.cjs
+      - name: Upload browser article, screenshot and console log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qwen-real-browser
+          path: dist/qwen-real-browser
+          retention-days: 30

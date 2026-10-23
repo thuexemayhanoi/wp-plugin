@@ -1,3 +1,17 @@
+# Qwen Local Writer — No Commercial AI API (Beta Branch)
+
+> **New development path:** [Qwen Local Writer source](qwen-local-writer/README.md) | [Architecture spec](docs/superpowers/specs/2026-10-23-qwen-local-writer-design.md) | [PR #1](https://github.com/thuexemayhanoi/wp-plugin/pull/1)
+>
+> The **separate `qwen-local-writer/` WordPress plugin** is a no-paid-API, WebGPU browser-local Qwen3-0.6B draft editor aiming for ~1,500 words and a **technical** QA threshold of 70/100. It writes WordPress **drafts only**; no paid Claude/Gemini/OpenAI inference, no API keys, no hidden PHP model backend.
+>
+> **Beta 0.3.0 status:** the runtime (Transformers.js 4.3.1 + ONNX Runtime Web) is bundled in the ZIP — no CDN. Real Qwen3-0.6B inference (pinned revision `58ca03a5`) is exercised in CI on CPU and inside Chromium through the plugin UI (WASM), and drafts are saved into a disposable WordPress; see [docs/QWEN-TEST-REPORT.md](docs/QWEN-TEST-REPORT.md). QA is split into technical / factual-flag / SEO groups plus a human editorial sign-off; the score never certifies facts. Feature-by-feature evidence: [docs/FEATURE-INVENTORY.md](docs/FEATURE-INVENTORY.md); audit: [docs/FINAL-AUDIT-REPORT.md](docs/FINAL-AUDIT-REPORT.md). **Not yet verified:** a real WebGPU GPU, Safari/iOS with the real model and the live website. Qwen 0.6B can hallucinate; the browser tab must stay open. Install on staging first.
+>
+> **Legacy preservation:** The older API-driven plugin **below** remains unchanged in this repository to protect existing campaigns and database state. The standalone Qwen ZIP contains none of the commercial-provider PHP classes. No destructive migration or automated removal of existing credentials has taken place.
+
+---
+
+## Legacy v1.2 plugin documentation (preserved)
+
 # Multi AI SEO Content Factory — WordPress v1.2.0
 
 **Plugin tạo bài Markdown đơn giản**, hỗ trợ API Claude, Gemini, OpenAI; quản lý source chính tại repo `thuexemayhanoi/wp-plugin`.
