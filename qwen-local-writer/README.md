@@ -37,13 +37,14 @@ danh sách, **đậm**, *nghiêng* và liên kết http(s). Mọi HTML/mã khác
 |---|---|
 | WordPress / PHP | 6.9+ / 8.1+ (CI: WP 6.9.10 + PHP 8.1, WP 7.1.3 + PHP 8.3) |
 | Kết nối | HTTPS (WebGPU và Cache Storage chỉ chạy trong secure context) |
-| Trình duyệt | Chrome/Edge bản mới (WebGPU); Firefox/Safari bản mới chạy được chế độ WASM; Safari chưa hỗ trợ WASM đa luồng ở chế độ này |
+| Trình duyệt | Chrome/Edge bản mới (WebGPU). Firefox/Safari bản mới chạy chế độ WASM; Safari không hỗ trợ COEP `credentialless` nên WASM chạy một luồng (chậm hơn). Chỉ Chromium đã được kiểm thử tự động |
 | Máy tính | Khuyến nghị ≥ 8 GB RAM, ~1–1,5 GB dung lượng trình duyệt trống |
 | Tải lên ZIP | ~7 MB — nếu hosting giới hạn upload thấp hơn, giải nén và tải thư mục qua SFTP |
 
-Tốc độ đo thật trên máy CI 4 vCPU, không GPU (chi tiết trong báo cáo kiểm thử): WASM trong Chromium ~2,6 token/giây
-với 2 luồng (bài 1.500 từ mất cỡ 15–25 phút); WebGPU giả lập phần mềm chỉ ~0,13 token/giây nên chế độ *Tự động* bỏ qua.
-GPU thật thường nhanh hơn nhiều nhưng **chưa được đo** trong dự án này.
+Tốc độ đo thật trên máy CI 4 vCPU (2 nhân vật lý), không GPU — chi tiết trong báo cáo kiểm thử: viết trọn bài 1.599 từ
+trong Chromium chế độ WASM mất **28 phút** (1,2–1,3 token/giây tính cả phần đọc prompt; 2,6 token/giây với prompt ngắn).
+WebGPU giả lập phần mềm chỉ ~0,13 token/giây nên chế độ *Tự động* bỏ qua. Cùng model trên CPU gốc (Node) đạt 23–27
+token/giây. GPU thật thường nhanh hơn WASM nhiều nhưng **chưa được đo** trong dự án này.
 
 ## Cài đặt và sử dụng
 
@@ -113,12 +114,12 @@ rà soát*, **không** chứng nhận nội dung đúng, không bảo đảm SEO
 
 ```bash
 python3 scripts/vendor_qwen_deps.py            # lấy runtime từ npm, kiểm tra hash
-php qwen-local-writer/tests/quality.php        # QA (23 kiểm tra)
+php qwen-local-writer/tests/quality.php        # QA (27 kiểm tra, gồm bài Qwen thật bị lỗi)
 php qwen-local-writer/tests/markdown.php       # Markdown → block an toàn (18)
-node --test qwen-local-writer/tests/js/*.test.mjs   # điều phối bài viết + Worker (19)
+node --test qwen-local-writer/tests/js/*.test.mjs   # điều phối bài viết + Worker + lỗi thật của Qwen (21)
 python3 scripts/build_qwen.py                  # dist/qwen-local-writer.zip
 wp eval-file qwen-local-writer/tests/wp-integration.php   # trên WordPress dùng-một-lần (49)
-WP_URL=… WP_CLI="wp --path=…" node qwen-local-writer/tests/e2e/admin-ui.e2e.cjs   # Chromium, model giả (42)
+WP_URL=… WP_CLI="wp --path=…" node qwen-local-writer/tests/e2e/admin-ui.e2e.cjs   # Chromium, model giả (45)
 ```
 
 `tests/e2e/fake-transformers.mjs` là **bản giả lập chỉ dùng để kiểm thử giao diện**, không chứng minh chất lượng Qwen.
