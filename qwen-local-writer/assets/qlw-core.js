@@ -207,13 +207,16 @@ export function parseOutline(text, input, max = SECTION_COUNT) {
 }
 
 /**
- * "Thuê xe máy Long Biên: A", "Thuê xe máy Long Biên: B", … → "A", "B".
- * The 0.6B model sometimes repeats the keyword as a prefix of every H2 (keyword stuffing).
+ * "Thuê xe máy Long Biên: A", "Thuê xe máy: B", "Thuê xe máy tại Long Biên: C" … → "A", "B", "C".
+ * The 0.6B model repeats the keyword as a prefix of most H2s (keyword stuffing); prefixes are
+ * grouped by their first three words because the model varies the rest (runs 39907043073, 39910343866).
  */
 function dropSharedPrefix(lines) {
   const split = line => {
     const m = line.match(/^([^:：]{3,60})[:：]\s*(.+)$/u);
-    return m && countWords(m[1]) <= 8 && countWords(m[2]) >= 3 ? { prefix: m[1].trim().toLowerCase(), rest: m[2].trim() } : null;
+    if (!m || countWords(m[1]) > 8 || countWords(m[2]) < 3) return null;
+    const words = m[1].toLowerCase().match(/[\p{L}\p{N}]+/gu) || [];
+    return { prefix: words.slice(0, 3).join(' '), rest: m[2].trim() };
   };
   const counts = new Map();
   for (const line of lines) {
@@ -254,7 +257,10 @@ const similar = (a, b) => a === b
 const WB = String.raw`(?<![\p{L}\p{N}])`;
 const WE = String.raw`(?![\p{L}\p{N}])`;
 const META_LINE_RE = new RegExp([
-  String.raw`^(?:đoạn|phần)\s+(?:văn|mở bài|mở đầu|giới thiệu|kết luận|kết|này|tiếp theo)${WE}.{0,160}${WB}(?:như sau|sau đây|tóm tắt|nhấn mạnh|gồm có|sẽ (?:giới thiệu|trình bày|nói))${WE}`,
+  String.raw`^(?:đoạn|phần)\s+(?:văn|mở bài|mở đầu|giới thiệu|kết luận|kết|này|tiếp theo)${WE}.{0,160}${WB}(?:như sau|sau đây|tóm tắt|nhấn mạnh|gồm có|đưa ra|cung cấp|mô tả|giúp người đọc|sẽ (?:giới thiệu|trình bày|nói))${WE}`,
+  // 'Bài viết "…" bắt đầu bằng nội dung này:' / 'The article begins as follows:' (run 39910343866).
+  String.raw`^(?:bài viết|the article|article)${WE}[^\n]{0,160}${WB}(?:bắt đầu|begins?|starts?)${WE}[^\n]{0,80}[:：]\s*$`,
+  String.raw`${WB}(?:nội dung|đoạn văn|phần)\s+(?:này|sau|dưới đây)\s*[:：]\s*$`,
   String.raw`(?:có thể|được|sẽ) (?:được )?viết (?:lại )?như sau\s*[:：]?\s*$`,
   String.raw`^\(?\s*(?:[^()\n]{0,40}\s)?\d+\s*(?:từ|words?)${WE}[^()\n]{0,30}\)?\.?$`,
   String.raw`^(?:đề xuất|gợi ý)\s+thêm\s+(?:một\s+)?danh sách`,
@@ -308,7 +314,7 @@ const CHATBOT_RE = /[^.!?\n]*(?:let me know|feel free to (?:ask|reach out)|i hop
  * - stops at the first line that starts another outline section ("bleed");
  * - removes Chinese drift and a fragment cut off by the token limit.
  */
-export function cleanPart(text, { heading = '', others = [], allowSubheadings = true } = {}) {
+export function cleanPart(text, { heading = '', title = '', others = [], allowSubheadings = true } = {}) {
   const warnings = [];
   const value0 = stripThinking(text)
     .replace(/\r\n?/g, '\n')
@@ -319,6 +325,7 @@ export function cleanPart(text, { heading = '', others = [], allowSubheadings = 
     .replace(/^\s*(?:dưới đây là|sau đây là|đây là|here is|here's|below is|sure[,!])[^\n]{0,160}[:：]\s*\n/iu, '');
 
   const own = heading ? headingKey(heading) : '';
+  const articleTitle = title ? headingKey(title) : '';
   const otherKeys = others.map(headingKey).filter(Boolean);
   const out = [];
   for (const rawLine of value0.split('\n')) {
@@ -338,6 +345,8 @@ export function cleanPart(text, { heading = '', others = [], allowSubheadings = 
     const opening = !out.some(row => row.trim()) && !/^\s*(?:[-*+]|\d+[.)])\s/.test(line)
       && !/[.!?…]\s*$/u.test(line) && countWords(plain) <= 18;
     if (key && own && similar(key, own) && (headingLike || key.length <= own.length + 3 || opening)) continue;
+    // The article title restated above a section (run 39910343866).
+    if (key && articleTitle && (opening || headingLike) && similar(key, articleTitle)) continue;
     if (headingLike && otherKeys.some(other => similar(key, other))) {
       warnings.push('bleed');
       break;
@@ -451,7 +460,7 @@ export async function writeArticle({ input, generate, onProgress = () => {}, sho
     return chosen;
   };
   const part = async (messages, words, heading, allowSubheadings) => {
-    const options = { heading, others: headings.filter(h => h !== heading), allowSubheadings };
+    const options = { heading, title: input.title, others: headings.filter(h => h !== heading), allowSubheadings };
     let cleaned = prepare(await call(messages, words), options);
     const weak = c => c.words < words * 0.45 || c.warnings.includes('foreign-script');
     if (!stopped && weak(cleaned)) {
@@ -463,7 +472,7 @@ export async function writeArticle({ input, generate, onProgress = () => {}, sho
     stats.warnings.push(...cleaned.warnings.map(w => `${heading || 'intro/conclusion'}: ${w}`));
     return commit(cleaned);
   };
-  const extend = (text, heading) => commit(prepare(text, { heading, others: headings.filter(h => h !== heading) }));
+  const extend = (text, heading) => commit(prepare(text, { heading, title: input.title, others: headings.filter(h => h !== heading) }));
 
   try {
     progress('outline', { message: vi ? 'Đang lập dàn ý H2…' : 'Creating the H2 outline…' });

@@ -110,7 +110,13 @@ Bài trong trình duyệt lộ thêm 2 lỗi trình bày, đã sửa sau lần c
 ngay trên đoạn đầu (nay bị bỏ). Lỗi nội dung vẫn còn: "mua xe" thay vì thuê, câu vô nghĩa ("xe có thể thổi bóng"),
 NAP chép từ brief nhưng viết tắt sai ("Đn:"). QA 100 **không** có nghĩa là bài đúng — vẫn phải biên tập.
 
-### 2.7 0.3.0-beta: chấm lại bài thật bằng QA mới (kiểm chứng dữ kiện + SEO)
+### 2.7 Lần chạy 7 (run 39910343866, commit 453325b) — PASS
+Node CPU: 4 bài 1.547–1.806 từ, 8 H2, QA (0.2) 90–100 (vi-brief 1.658/90 kể trải nghiệm; en-brief 1.547/95 thiếu từ khóa; vi-general 1.806/90 từ khóa dày; en-general 1.607/100), 241–374 giây/bài. Chromium/WASM: **1.776 từ, 30,5 phút**, 1,2–1,3 token/s, lưu nháp #5,
+tải lại từ cache 5 giây, chỉ liên hệ Hugging Face + gravatar. Lỗi trình bày còn lại (đã sửa sau lần chạy này, có test hồi quy):
+tiền tố từ khóa dạng biến thể ("Thuê xe máy:", "Thuê xe máy tại Long Biên:"), tiêu đề bài lặp ở đầu một mục, câu dẫn
+"Bài viết "…" bắt đầu bằng nội dung này:" và "Đoạn văn này đưa ra…". Nội dung vẫn lẫn "mua xe/người mua".
+
+### 2.8 0.3.0-beta: chấm lại bài thật bằng QA mới (kiểm chứng dữ kiện + SEO)
 Cùng các bài gốc trong `docs/qwen-samples/`, cùng brief như CI, chấm bằng QA 0.3.0 (không chạy lại model):
 
 | Bài | QA 0.2.0 | QA 0.3.0 | Cảnh báo mới |
@@ -129,10 +135,10 @@ Lần chạy model thật cho commit 0.3.0-beta cuối (prompt "THUÊ, không ph
 
 | Bộ kiểm thử | Kết quả cục bộ |
 |---|---|
-| `php tests/quality.php` (QA, gồm câu và bài thật bị lỗi) | 53/53 |
+| `php tests/quality.php` (QA, gồm câu và bài thật bị lỗi) | 57/57 |
 | `php tests/markdown.php` (Markdown → block) | 18/18 |
-| `node --test tests/js/*.test.mjs` (điều phối, Worker, lỗi thật của Qwen) | 27/27 |
+| `node --test tests/js/*.test.mjs` (điều phối, Worker, lỗi thật của Qwen) | 28/28 |
 | `wp eval-file tests/wp-integration.php` (WP 7.1.3 + SQLite, cùng plugin cũ 1.2.0) | 66/66 |
 | `tests/rollback.sh` (0.3.0-beta ↔ 0.2.0-beta, dữ liệu giữ nguyên) | PASS |
 | `tests/e2e/admin-ui.e2e.cjs` (Chromium, model giả, cùng plugin cũ) | 59/59 |
-| Smoke plugin cũ `tests/smoke-v120.php` | 27/27 |
+| Smoke plugin cũ `tests/smoke-v120.php` | 28/28 |

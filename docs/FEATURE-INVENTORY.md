@@ -32,7 +32,7 @@ Cách đọc cột **Tested**:
 | Xoá cache model | yes | E2E (fake) | PARTIAL | `clearCache()`; xoá cache thật chưa đo |
 | Giải phóng bộ nhớ (unload + terminate Worker), tải lại | yes (0.3.0) | E2E | DONE | nút `#qlw-unload`; E2E "Qwen loads again after freeing memory" |
 | Viết theo phần: dàn ý → mở bài → 7 H2 (+H3) → kết luận, ~1.500 từ | yes | REAL MODEL | DONE | `writeArticle`; 6 lần chạy thật: 1.403–1.733 từ (CPU), 1.599–1.716 từ (Chromium) |
-| Làm sạch: lặp câu/đoạn, chữ Hán, câu chatbot/meta, mục trộn lẫn, phần bị cắt, heading rác, tiền tố từ khóa H2, dòng nhắc tiêu đề | yes | UNIT (từ đầu ra thật) + REAL MODEL | DONE | `cleanPart/parseOutline/dropRepeats`; `core.test.mjs` (27) |
+| Làm sạch: lặp câu/đoạn, chữ Hán, câu chatbot/meta, mục trộn lẫn, phần bị cắt, heading rác, tiền tố từ khóa H2, dòng nhắc tiêu đề | yes | UNIT (từ đầu ra thật) + REAL MODEL | DONE | `cleanPart/parseOutline/dropRepeats`; `core.test.mjs` (28) |
 | Prompt bài thuê xe: "THUÊ, không phải mua bán" | yes (0.3.0) | UNIT | PARTIAL | `contextBlock`; hiệu quả trên model thật chờ lần chạy CI của commit cuối |
 | Nút Dừng thật sự dừng, giữ bản nháp | yes | UNIT + E2E | DONE | `InterruptableStoppingCriteria`; E2E "stop keeps the partial draft" |
 | Lưu khôi phục trong trình duyệt (cả khi đang stream), khôi phục sau tải lại | yes | E2E | DONE | `persist/persistThrottled`; E2E "reload during writing restores the streamed text" |
@@ -43,7 +43,7 @@ Cách đọc cột **Tested**:
 | Không ghi đè bài đã rời Nháp, bài không do plugin tạo, bài của người khác | yes (người khác: 0.3.0) | REAL WP | DONE | mã `not_draft`, 404, `not_owner` |
 | Markdown → block H2–H3/đoạn/danh sách, không H1, escape, `wp_kses_post` | yes | UNIT + REAL WP + E2E | DONE | `markdown.php` (18); block editor xác nhận mọi block hợp lệ |
 | Danh mục (kiểm tra `assign_term`) | yes | REAL WP | DONE | `wp-integration.php` |
-| QA kỹ thuật (ngưỡng 70) | yes | UNIT + REAL MODEL | DONE | `quality.php` (53); bài thật QA 85–100 |
+| QA kỹ thuật (ngưỡng 70) | yes | UNIT + REAL MODEL | DONE | `quality.php` (57); bài thật QA 85–100 |
 | Kiểm chứng dữ kiện (giá lệch brief theo mẫu xe, xe xăng gọi là xe điện, địa lý Hà Nội, mua/thuê, không cần cọc, khẳng định, đánh giá, nguồn, năm, trải nghiệm) | yes (0.3.0) | UNIT (câu thật) + chấm lại mẫu thật | PARTIAL | chỉ bắt mẫu sai đã biết; không thay được người kiểm chứng |
 | SEO: từ khóa, H2 nhồi từ khóa, độ dài tiêu đề, trùng tiêu đề/nội dung với bài đã có | yes (0.3.0) | UNIT + REAL WP | DONE | `Ajax::similar_posts`; tích hợp "copying an existing post is flagged" |
 | Biên tập (con người): ô xác nhận trong trình soạn bài, tự bỏ khi Qwen viết lại | yes (0.3.0) | REAL WP + E2E (block editor) | DONE | `save_editorial_review`; E2E "editorial sign-off is saved from the block editor metabox" |

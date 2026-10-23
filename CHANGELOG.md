@@ -6,9 +6,9 @@
 - **SEO**: H2 nhồi từ khóa/tiền tố, độ dài tiêu đề, từ khóa trong tiêu đề, phát hiện bài gần trùng tiêu đề/nội dung với bài đã có (so cụm 5 từ). Điền từ khóa chính cho Yoast SEO/Rank Math khi đang bật (không ghi đè).
 - **An toàn dữ liệu**: không ghi đè bản nháp của người dùng khác (`not_owner`), dù vai trò Biên tập viên được sửa bài của người khác.
 - **Ổn định**: lưu khôi phục cả khi token đang chạy (3 giây/lần); Worker sập được báo đúng ("dừng đột ngột, thường do thiếu RAM") thay vì "trình duyệt quá cũ" và không còn lỗi chưa xử lý trên trang; nút *Giải phóng bộ nhớ*; cập nhật `qlw_version` khi thay ZIP (nâng/hạ phiên bản).
-- **Viết bài**: prompt bài thuê xe nói rõ "THUÊ xe, không phải mua bán"; bỏ tiền tố từ khóa lặp ở mọi H2 và dòng nhắc lại tiêu đề mục.
+- **Viết bài**: prompt bài thuê xe nói rõ "THUÊ xe, không phải mua bán"; bỏ tiền tố từ khóa lặp ở H2 (kể cả biến thể "Thuê xe máy:", "Thuê xe máy tại Long Biên:"), dòng nhắc lại tiêu đề mục hoặc tiêu đề bài, câu dẫn "Bài viết … bắt đầu bằng nội dung này:" và "Đoạn văn này đưa ra…" (lần chạy thật 7).
 - **Dữ kiện đã xác minh của cửa hàng** (cài đặt quản trị) + nút chèn vào brief khi cần.
-- **Kiểm thử**: QA 53, JS 27, tích hợp WordPress 66, E2E 59 (thêm: Worker sập, tải lại giữa chừng, giải phóng bộ nhớ, chèn dữ kiện, xác nhận biên tập qua block editor), `tests/rollback.sh` (0.3.0-beta ↔ 0.2.0-beta), CI chạy thêm cùng WooCommerce + Yoast SEO + Rank Math.
+- **Kiểm thử**: QA 57, JS 28, tích hợp WordPress 66, E2E 59 (thêm: Worker sập, tải lại giữa chừng, giải phóng bộ nhớ, chèn dữ kiện, xác nhận biên tập qua block editor), `tests/rollback.sh` (0.3.0-beta ↔ 0.2.0-beta), CI chạy thêm cùng WooCommerce + Yoast SEO + Rank Math.
 
 ## Qwen Local Writer 0.2.0-beta — 2026-10-23 (plugin riêng trong `qwen-local-writer/`)
 - Bỏ import thư viện từ CDN: Transformers.js 4.3.1 + ONNX Runtime Web 1.31.0-dev được đóng gói trong ZIP, lấy từ npm và kiểm tra sha512/sha256 (`scripts/vendor_qwen_deps.py`, `assets/vendor/manifest.json`).

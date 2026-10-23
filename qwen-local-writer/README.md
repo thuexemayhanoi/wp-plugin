@@ -153,9 +153,9 @@ bắt được những mẫu sai đã biết và các con số không có trong 
 
 ```bash
 python3 scripts/vendor_qwen_deps.py            # lấy runtime từ npm, kiểm tra hash
-php qwen-local-writer/tests/quality.php        # QA (53 kiểm tra, dựng từ lỗi thật của Qwen)
+php qwen-local-writer/tests/quality.php        # QA (57 kiểm tra, dựng từ lỗi thật của Qwen)
 php qwen-local-writer/tests/markdown.php       # Markdown → block an toàn (18)
-node --test qwen-local-writer/tests/js/*.test.mjs   # điều phối bài viết + Worker + lỗi thật của Qwen (27)
+node --test qwen-local-writer/tests/js/*.test.mjs   # điều phối bài viết + Worker + lỗi thật của Qwen (28)
 python3 scripts/build_qwen.py                  # dist/qwen-local-writer.zip
 wp eval-file qwen-local-writer/tests/wp-integration.php   # trên WordPress dùng-một-lần (66)
 WP_URL=… WP_CLI="wp --path=…" node qwen-local-writer/tests/e2e/admin-ui.e2e.cjs   # Chromium, model giả (59)

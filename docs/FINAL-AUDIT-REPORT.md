@@ -51,14 +51,14 @@
 | 4 | Lỗi Worker lọt thành lỗi chưa xử lý trên trang | E2E mới | thấp |
 | 5 | Trong lúc stream, bản khôi phục chỉ lưu sau mỗi phần (debounce không kích hoạt) | audit mã | trung bình |
 | 6 | Thay ZIP (nâng/hạ cấp) không cập nhật `qlw_version` | audit mã + rollback test | thấp |
-| 7 | 6/7 H2 cùng tiền tố từ khóa "Thuê xe máy Long Biên:" và dòng nhắc lại tiêu đề mục | lần chạy thật 6 | thấp |
+| 7 | H2 lặp tiền tố từ khóa (cả dạng biến thể), dòng nhắc lại tiêu đề mục/tiêu đề bài, câu dẫn meta mới ("… bắt đầu bằng nội dung này:", "Đoạn văn này đưa ra…") | lần chạy thật 6 và 7 | thấp |
 | 8 | Không có cách giải phóng RAM mà không xóa cache model | audit | thấp |
 | 9 | Plugin cũ: 5 trang quản trị không vào được, trường ngân sách luôn dừng campaign, giới hạn số từ không khớp, `smoke-v110.php` lỗi thời | kiểm kê | ghi nhận — **không sửa** (giữ nguyên 1.2.0 theo yêu cầu) |
 
 ## 4. Lỗi đã sửa
 Đã sửa lỗi 1–8, mỗi lỗi có kiểm thử hồi quy:
-- `tests/quality.php` (53 kiểm tra);
-- `tests/js/core.test.mjs` (27);
+- `tests/quality.php` (57 kiểm tra);
+- `tests/js/core.test.mjs` (28);
 - `tests/wp-integration.php` (66);
 - `tests/e2e/admin-ui.e2e.cjs` (59);
 - `tests/rollback.sh`.
@@ -70,9 +70,9 @@ Lỗi 9 thuộc plugin cũ, chỉ được ghi vào tài liệu.
 | Bộ kiểm thử | Kết quả |
 |---|---|
 | `php -l` mọi file PHP của repo | PASS |
-| `php qwen-local-writer/tests/quality.php` | 53/53 PASS |
+| `php qwen-local-writer/tests/quality.php` | 57/57 PASS |
 | `php qwen-local-writer/tests/markdown.php` | 18/18 PASS |
-| `node --test qwen-local-writer/tests/js/*.test.mjs` | 27/27 PASS |
+| `node --test qwen-local-writer/tests/js/*.test.mjs` | 28/28 PASS |
 | `node --check` mọi JS của plugin + `assets/admin.js` | PASS |
 | `wp eval-file tests/wp-integration.php` (WP 7.1.3 + SQLite, cùng plugin cũ) | 66/66 PASS |
 | `tests/e2e/admin-ui.e2e.cjs` (Chromium, model giả) | 59/59 PASS |

@@ -247,7 +247,8 @@ test('real browser run 39907043073: keyword prefix on every H2, title restated a
   assert.deepEqual(parseOutline(outline, vi), [
     'Lời khuyên khi lựa chọn mẫu xe',
     'Lưu ý đến chính sách cọc và giá cả',
-    'Thuê xe máy tại Long Biên: Lời khuyên về điều kiện và thời gian',
+    // Since run 39910343866 prefixes are grouped by their first three words, so this variant goes too.
+    'Lời khuyên về điều kiện và thời gian',
     'Gợi ý về các mẫu xe phù hợp',
     'Lưu ý đến thời gian đặt xe và cách xử lý cọc',
     'Gợi ý về chính sách hỗ trợ khi sử dụng',
@@ -267,6 +268,38 @@ test('real browser run 39907043073: keyword prefix on every H2, title restated a
     '- Giá thuê xe máy Honda Vision 200.000đ/ngày\n- Honda Wave 150.000đ/ngày');
   assert.equal(cleanPart('Giá thuê xe máy thay đổi theo mẫu xe và thời gian thuê.', { heading }).text,
     'Giá thuê xe máy thay đổi theo mẫu xe và thời gian thuê.');
+});
+
+test('real browser run 39910343866: prefix variants, the article title above a section, new meta lead-ins', () => {
+  const vi = normalizeInput({ title: 'Thuê xe máy ở Long Biên: lưu ý trước khi nhận xe' });
+  const outline = [
+    'Thuê xe máy tại Long Biên: Lưu ý đến thời gian và giá cả',
+    'Thuê xe máy Long Biên: Lựa chọn phù hợp nhất theo địa điểm và điều kiện sử dụng',
+    'Thuê xe máy: Tại Long Biên – Tìm hiểu về các lựa chọn hiện nay',
+    'Thuê xe máy Long Biên: Chọn xe phù hợp, giá cả hợp lý',
+    'Mở cửa xe máy: Thận trọng và lựa chọn đúng lúc',
+    'Thuê xe máy: Tính toán chi phí và đảm bảo điều kiện đủ',
+    'Thuê xe máy: Đảm bảo hiệu suất và độ tin cậy của nhà cung cấp',
+  ].join('\n');
+  assert.deepEqual(parseOutline(outline, vi), [
+    'Lưu ý đến thời gian và giá cả',
+    'Lựa chọn phù hợp nhất theo địa điểm và điều kiện sử dụng',
+    'Tại Long Biên – Tìm hiểu về các lựa chọn hiện nay',
+    'Chọn xe phù hợp, giá cả hợp lý',
+    'Mở cửa xe máy: Thận trọng và lựa chọn đúng lúc',
+    'Tính toán chi phí và đảm bảo điều kiện đủ',
+    'Đảm bảo hiệu suất và độ tin cậy của nhà cung cấp',
+  ]);
+  const body = 'Trong thời gian tới, nhiều người lựa chọn thuê xe máy để đi làm hằng ngày.';
+  assert.equal(cleanPart(`Thuê xe máy ở Long Biên: Lưu ý trước khi nhận xe\n\n${body}`, { heading: 'Đảm bảo hiệu suất và độ tin cậy của nhà cung cấp', title: vi.title }).text, body);
+  const intro = cleanPart(`Bài viết **"Thuê xe máy ở Long Biên: Lưu ý trước khi nhận xe"** bắt đầu bằng nội dung này:\n\n${body}`, { allowSubheadings: false, title: vi.title });
+  assert.equal(intro.text, body);
+  assert.ok(intro.warnings.includes('meta'));
+  const meta = cleanPart(`${body}\n\nĐoạn văn này đưa ra các thông tin cơ bản về lịch trình và giá cả, giúp người đọc có được cái nhìn đầy đủ.`);
+  assert.equal(meta.text, body);
+  // A normal list introduction inside a section stays (a leading "Dưới đây là …:" preamble is still dropped).
+  const list = `${body}\n\nDưới đây là một vài lưu ý khi nhận xe:\n\n- Kiểm tra phanh\n- Kiểm tra đèn`;
+  assert.equal(cleanPart(list).text, list);
 });
 
 test('rental articles tell the model it is about renting, not buying (real runs wrote "người mua")', () => {

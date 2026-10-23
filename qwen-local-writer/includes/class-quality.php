@@ -36,7 +36,7 @@ final class Quality {
     private const UNIT = '(?:đ|đồng|vnđ|vnd|k|nghìn|ngàn|triệu|tr|tỷ|million|thousand|usd|\$|€)';
 
     /** Mirrors META_LINE_RE in assets/qlw-core.js. */
-    private const META_RE = '/^(?:đoạn|phần)\s+(?:văn|mở bài|mở đầu|giới thiệu|kết luận|kết|này|tiếp theo)\b.{0,160}\b(?:như sau|sau đây|tóm tắt|nhấn mạnh|gồm có|sẽ (?:giới thiệu|trình bày|nói))\b|(?:có thể|được|sẽ) (?:được )?viết (?:lại )?như sau\s*[:：]?\s*$|^\(?\s*(?:[^()\n]{0,40}\s)?\d+\s*(?:từ|words?)\b[^()\n]{0,30}\)?\.?$|^(?:đề xuất|gợi ý)\s+thêm\s+(?:một\s+)?danh sách|^(?:this|the)\s+(?:section|paragraph|introduction|conclusion|article)\s+(?:will|should|can|summari[sz]es|highlights)\b|^(?:here is|here\'s|below is|sure[,!])\b|^(?:word count|note)\s*[:：]|(?:^|[,;]\s*)(?:đây là|sau đây là|dưới đây là)\s+(?:nội dung|đoạn|phần|bài)\b[^\n]{0,80}[:：]\s*$|(?:^|[,;]\s*)here (?:is|are) (?:the|a|an|my)\s[^\n]{0,80}[:：]\s*$/iu';
+    private const META_RE = '/^(?:đoạn|phần)\s+(?:văn|mở bài|mở đầu|giới thiệu|kết luận|kết|này|tiếp theo)\b.{0,160}\b(?:như sau|sau đây|tóm tắt|nhấn mạnh|gồm có|đưa ra|cung cấp|mô tả|giúp người đọc|sẽ (?:giới thiệu|trình bày|nói))\b|^(?:bài viết|the article|article)\b[^\n]{0,160}\b(?:bắt đầu|begins?|starts?)\b[^\n]{0,80}[:：]\s*$|(?:nội dung|đoạn văn|phần)\s+(?:này|sau|dưới đây)\s*[:：]\s*$|(?:có thể|được|sẽ) (?:được )?viết (?:lại )?như sau\s*[:：]?\s*$|^\(?\s*(?:[^()\n]{0,40}\s)?\d+\s*(?:từ|words?)\b[^()\n]{0,30}\)?\.?$|^(?:đề xuất|gợi ý)\s+thêm\s+(?:một\s+)?danh sách|^(?:this|the)\s+(?:section|paragraph|introduction|conclusion|article)\s+(?:will|should|can|summari[sz]es|highlights)\b|^(?:here is|here\'s|below is|sure[,!])\b|^(?:word count|note)\s*[:：]|(?:^|[,;]\s*)(?:đây là|sau đây là|dưới đây là)\s+(?:nội dung|đoạn|phần|bài)\b[^\n]{0,80}[:：]\s*$|(?:^|[,;]\s*)here (?:is|are) (?:the|a|an|my)\s[^\n]{0,80}[:：]\s*$/iu';
 
     /**
      * Petrol scooters/motorbikes. Ambiguous English words (vision, lead, future, click, wave)
@@ -300,7 +300,8 @@ final class Quality {
         foreach ($h2_titles as $h) {
             // "*H2:" / "Phần 1:" labels are heading-format artefacts, not a keyword prefix.
             if (preg_match('/^([^:：]{3,60})[:：]\s*\S/u', $h, $pm) && !preg_match('/^[*#\s]*(?:h[1-6]|phần|mục|section|part)\b/iu', $pm[1])) {
-                $p = mb_strtolower(trim($pm[1]));
+                // Grouped by the first three words: the model varies the rest ("Thuê xe máy:", "Thuê xe máy tại Long Biên:").
+                $p = implode(' ', array_slice(self::words(mb_strtolower(trim($pm[1]))), 0, 3));
                 $prefixes[$p] = ($prefixes[$p] ?? 0) + 1;
             }
         }

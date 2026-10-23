@@ -166,4 +166,12 @@ check(in_array('similar-content', $failed_ids($similar), true) && in_array('simi
 $unique = Quality::assess(vi_article(), 1500, 'vi', '', '', ['similar' => []]);
 check(!array_intersect(['similar-content', 'similar-title'], $failed_ids($unique)), 'no similar posts, no flag');
 
+// Run 39910343866: prefix variants on H2s and new meta lead-ins.
+$variants = "Mở bài ngắn.\n\n" . implode("\n\n", array_map(static fn ($h) => "## $h\n\n" . str_repeat('Nội dung hữu ích cho người thuê xe máy ở Hà Nội. ', 14), ['Thuê xe máy tại Long Biên: Lưu ý đến giá', 'Thuê xe máy: Tính toán chi phí', 'Thuê xe máy: Đảm bảo độ tin cậy', 'Kiểm tra xe khi nhận', 'Trả xe đúng hẹn']));
+check(in_array('heading-stuffing', $failed_ids(Quality::assess($variants, 1500, 'vi')), true), 'H2 prefix variants ("Thuê xe máy:", "Thuê xe máy tại Long Biên:") count as one shared prefix');
+foreach (['Bài viết **"Thuê xe máy ở Long Biên"** bắt đầu bằng nội dung này:', 'Đoạn văn này đưa ra các thông tin cơ bản về lịch trình và giá cả, giúp người đọc có được cái nhìn đầy đủ.'] as $line) {
+    check(in_array('meta', $failed_ids(Quality::assess(vi_article(8, 7, "\n\n$line\n\nTiếp tục."), 1500, 'vi')), true), 'meta lead-in is flagged: ' . mb_substr($line, 0, 40));
+}
+check(!in_array('meta', $failed_ids(Quality::assess(vi_article(8, 7, "\n\nDưới đây là một vài lưu ý khi nhận xe:\n\n- Kiểm tra phanh"), 1500, 'vi')), true), 'a normal list introduction is not meta');
+
 finish('Quality');
