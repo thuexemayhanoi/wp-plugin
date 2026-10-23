@@ -173,8 +173,7 @@ function overlap(a, b) {
 
 /** Turn raw model output into clean, unique H2 titles. */
 export function parseOutline(text, input, max = SECTION_COUNT) {
-  const seen = new Set([input.title.toLowerCase()]);
-  const headings = [];
+  const candidates = [];
   for (let line of stripThinking(text).split(/\r?\n/)) {
     line = stripMarkers(line)
       .replace(/[<>{}[\]]/g, '')
@@ -187,6 +186,11 @@ export function parseOutline(text, input, max = SECTION_COUNT) {
     if (OUTLINE_NOISE.test(line) || OUTLINE_SKIP.test(line)) continue;
     if (foreignScriptRatio(line) > 0) continue;
     if (countWords(line) < 2 || countWords(line) > 18) continue;
+    candidates.push(line);
+  }
+  const seen = new Set([input.title.toLowerCase()]);
+  const headings = [];
+  for (const line of dropSharedPrefix(candidates)) {
     const key = line.toLowerCase();
     if (seen.has(key) || [...seen].some(other => overlap(key, other) >= 0.75)) continue;
     seen.add(key);
@@ -194,6 +198,28 @@ export function parseOutline(text, input, max = SECTION_COUNT) {
     if (headings.length >= max) break;
   }
   return headings;
+}
+
+/**
+ * "Thuê xe máy Long Biên: A", "Thuê xe máy Long Biên: B", … → "A", "B".
+ * The 0.6B model sometimes repeats the keyword as a prefix of every H2 (keyword stuffing).
+ */
+function dropSharedPrefix(lines) {
+  const split = line => {
+    const m = line.match(/^([^:：]{3,60})[:：]\s*(.+)$/u);
+    return m && countWords(m[1]) <= 8 && countWords(m[2]) >= 3 ? { prefix: m[1].trim().toLowerCase(), rest: m[2].trim() } : null;
+  };
+  const counts = new Map();
+  for (const line of lines) {
+    const parts = split(line);
+    if (parts) counts.set(parts.prefix, (counts.get(parts.prefix) || 0) + 1);
+  }
+  const shared = new Set([...counts].filter(([, n]) => n >= 3 && n * 2 >= lines.length).map(([prefix]) => prefix));
+  if (!shared.size) return lines;
+  return lines.map(line => {
+    const parts = split(line);
+    return parts && shared.has(parts.prefix) ? parts.rest.charAt(0).toLocaleUpperCase() + parts.rest.slice(1) : line;
+  });
 }
 
 /** Remove list/heading/bold markers and "H2:"-style labels from the start of a line, repeatedly. */
@@ -214,7 +240,8 @@ export function stripMarkers(line) {
 }
 
 const headingKey = value => stripMarkers(value).toLowerCase().replace(/[^\p{L}\p{N} ]/gu, ' ').replace(/\s+/g, ' ').trim();
-const similar = (a, b) => a === b || (Math.min(a.length, b.length) >= 12 && (a.includes(b) || b.includes(a)));
+const similar = (a, b) => a === b
+  || (Math.min(a.length, b.length) >= 12 && (a.includes(b) || b.includes(a) || overlap(a, b) >= 0.8));
 
 // Lines in which the model talks about the text instead of writing it.
 // JavaScript's \b is ASCII-only, so word edges use Unicode-aware lookarounds (Vietnamese letters).
@@ -300,7 +327,11 @@ export function cleanPart(text, { heading = '', others = [], allowSubheadings = 
       || /^\s*\**\s*h[1-6]\s*[:.-]/i.test(line)
       || /^\s*(?:\d{1,2}[.)]\s+)?\*\*[^*\n]{3,120}\*\*\s*[:：]?\s*$/.test(line);
     const key = headingKey(line);
-    if (key && own && similar(key, own) && (headingLike || key.length <= own.length + 3)) continue;
+    // A restated section title: a heading line, a line about as long as the title, or a short opening line
+    // without sentence punctuation (e.g. "Thuê xe máy ở Long Biên: Lời khuyên…" above the first paragraph).
+    const opening = !out.some(row => row.trim()) && !/^\s*(?:[-*+]|\d+[.)])\s/.test(line)
+      && !/[.!?…]\s*$/u.test(line) && countWords(plain) <= 18;
+    if (key && own && similar(key, own) && (headingLike || key.length <= own.length + 3 || opening)) continue;
     if (headingLike && otherKeys.some(other => similar(key, other))) {
       warnings.push('bleed');
       break;

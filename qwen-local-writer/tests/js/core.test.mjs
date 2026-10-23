@@ -233,6 +233,42 @@ test('final real browser run 39903514077: "Dựa trên thông tin…, đây là 
   assert.equal(cleanPart('Đây là hai mẫu xe phổ biến tại Long Biên.').text, 'Đây là hai mẫu xe phổ biến tại Long Biên.');
 });
 
+test('real browser run 39907043073: keyword prefix on every H2, title restated above the first paragraph', () => {
+  const vi = normalizeInput({ title: 'Thuê xe máy ở Long Biên: lưu ý trước khi nhận xe', keyword: 'thuê xe máy Long Biên' });
+  const outline = [
+    'Thuê xe máy Long Biên: Lời khuyên khi lựa chọn mẫu xe',
+    'Thuê xe máy Long Biên: Lưu ý đến chính sách cọc và giá cả',
+    'Thuê xe máy tại Long Biên: Lời khuyên về điều kiện và thời gian',
+    'Thuê xe máy Long Biên: Gợi ý về các mẫu xe phù hợp',
+    'Thuê xe máy Long Biên: Lưu ý đến thời gian đặt xe và cách xử lý cọc',
+    'Thuê xe máy Long Biên: Gợi ý về chính sách hỗ trợ khi sử dụng',
+    'Thuê xe máy Long Biên: Hướng dẫn về các điều kiện và giá cả hàng ngày',
+  ].join('\n');
+  assert.deepEqual(parseOutline(outline, vi), [
+    'Lời khuyên khi lựa chọn mẫu xe',
+    'Lưu ý đến chính sách cọc và giá cả',
+    'Thuê xe máy tại Long Biên: Lời khuyên về điều kiện và thời gian',
+    'Gợi ý về các mẫu xe phù hợp',
+    'Lưu ý đến thời gian đặt xe và cách xử lý cọc',
+    'Gợi ý về chính sách hỗ trợ khi sử dụng',
+    'Hướng dẫn về các điều kiện và giá cả hàng ngày',
+  ]);
+  // A prefix used by only one or two headings is kept.
+  assert.deepEqual(parseOutline('Giá thuê: Honda Vision và Honda Wave\nKiểm tra xe trước khi nhận\nGiấy tờ cần mang theo\nĐặt cọc và hợp đồng thuê xe', vi),
+    ['Giá thuê: Honda Vision và Honda Wave', 'Kiểm tra xe trước khi nhận', 'Giấy tờ cần mang theo', 'Đặt cọc và hợp đồng thuê xe']);
+
+  const body = 'Trong thời gian gần đây, xu hướng sử dụng xe máy trở nên phổ biến hơn ở Hà Nội.';
+  for (const heading of ['Thuê xe máy Long Biên: Lời khuyên khi lựa chọn mẫu xe', 'Lời khuyên khi lựa chọn mẫu xe']) {
+    assert.equal(cleanPart(`Thuê xe máy ở Long Biên: Lời khuyên khi lựa chọn mẫu xe\n\n${body}`, { heading }).text, body, heading);
+  }
+  // Sentences and list items that mention the section title are content, not an echo.
+  const heading = 'Giá thuê xe máy';
+  assert.equal(cleanPart('- Giá thuê xe máy Honda Vision 200.000đ/ngày\n- Honda Wave 150.000đ/ngày', { heading }).text,
+    '- Giá thuê xe máy Honda Vision 200.000đ/ngày\n- Honda Wave 150.000đ/ngày');
+  assert.equal(cleanPart('Giá thuê xe máy thay đổi theo mẫu xe và thời gian thuê.', { heading }).text,
+    'Giá thuê xe máy thay đổi theo mẫu xe và thời gian thuê.');
+});
+
 test('a section left empty by repeated text is dropped instead of leaving a bare H2', async () => {
   const en = normalizeInput({ title: 'Renting a motorbike in Hanoi', language: 'en' });
   const same = Array.from({ length: 20 }, (_, i) => `Sentence ${i} gives the same riding tip every single time.`).join(' ');
