@@ -228,6 +228,9 @@ const META_LINE_RE = new RegExp([
   String.raw`^(?:this|the)\s+(?:section|paragraph|introduction|conclusion|article)\s+(?:will|should|can|summari[sz]es|highlights)${WE}`,
   String.raw`^(?:here is|here's|below is|sure[,!])${WE}`,
   String.raw`^(?:word count|note)\s*[:：]`,
+  // "Dựa trên thông tin được cung cấp, đây là nội dung kết cho bài viết:" / "Based on the facts, here is the conclusion:"
+  String.raw`(?:^|[,;]\s*)(?:đây là|sau đây là|dưới đây là)\s+(?:nội dung|đoạn|phần|bài)${WE}[^\n]{0,80}[:：]\s*$`,
+  String.raw`(?:^|[,;]\s*)here (?:is|are) (?:the|a|an|my)\s[^\n]{0,80}[:：]\s*$`,
   // The model echoing the prompt's context lines back.
   String.raw`^(?:bài viết|article|từ khóa(?: chính)?|main keyword|thông tin|facts)\s*(?:\([^)]*\))?\s*[:：]`,
 ].join('|'), 'iu');

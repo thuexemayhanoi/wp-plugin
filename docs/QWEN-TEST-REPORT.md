@@ -2,6 +2,19 @@
 
 Ngày: 2026-10-23 · Nhánh `feat/qwen-local-no-paid-api` · PR #1
 
+## Tóm tắt (lần chạy model thật mới nhất đã PASS: run 39903514077, commit 66ecdc6)
+
+| Kiểm thử | Kết quả |
+|---|---|
+| 4 bài VI/EN, Qwen3-0.6B thật, CPU (Node + onnxruntime-node), mã điều phối của plugin | 1.403–1.733 từ, 7–8 H2, **QA 95–100**, 229–380 giây/bài |
+| 1 bài VI trong Chromium qua giao diện plugin thật (WASM q4, không GPU) → lưu nháp WordPress | **1.637 từ, 24 phút, nháp #5, QA 85**, tải lại model từ cache 4 giây |
+| Máy chủ trình duyệt liên hệ | chỉ `huggingface.co`, `us.aws.cdn.hf.co`, `secure.gravatar.com` (WordPress) |
+| Plugin trên WordPress sạch 6.9.10/PHP 8.1 và 7.1.3/PHP 8.3 + MySQL 8 (cùng plugin cũ 1.2.0) | tích hợp 49/49, E2E 45/45, gỡ cài đặt giữ bài |
+
+QA ≥ 70 là **điểm kỹ thuật**; mọi bài vẫn có lỗi nội dung cần biên tập (mục 2.2, 2.5). Mẫu gốc: `docs/qwen-samples/`.
+Sau lần chạy này chỉ sửa thêm 1 chi tiết làm sạch (câu dẫn "…, đây là nội dung kết cho bài viết:") — lần chạy model thật
+cho commit cuối được ghi ở PR #1.
+
 ## 1. Đo thực tế với model thật (probe CI, GitHub Actions ubuntu-latest, 4 vCPU, 16 GB RAM, không GPU)
 
 Model `onnx-community/Qwen3-0.6B-ONNX` revision `58ca03a5e7b354b480b1a82b34bde8dc7b854cc0`
@@ -32,7 +45,7 @@ QA mới chấm **60/100 → NEEDS_REVISION**.
 | VI không brief (`vi-general-q4`) | q4 | 1.556 | 7 | 100 | 213 s | 1.927 | — |
 | EN không brief (`en-general-q4`) | q4 | 1.510 | 7 | 95 | 183 s | 1.853 | trừ 5: 1 mục < 60 từ |
 
-Bản gốc 4 bài (chưa sửa): `docs/qwen-samples/`. **Cả 4 đạt ngưỡng kỹ thuật 70** và nằm trong 1.500 ± 10% từ.
+**Cả 4 đạt ngưỡng kỹ thuật 70** và nằm trong 1.500 ± 10% từ.
 
 **Đánh giá biên tập thủ công (con người phải làm, QA không làm được):** cấu trúc sạch (không còn trộn mục/câu meta),
 nhưng Qwen3-0.6B vẫn **bịa và sai kiến thức**, ví dụ: "Nguyễn Tú – người đã từng là một nhà thiết kế nổi tiếng",
@@ -72,13 +85,25 @@ Job **FAIL đúng**: QA chặn bài lặp. Nguyên nhân gốc: lời gọi "vi�
 và từ khóa nằm trong prompt mọi mục. Đã sửa: loại câu đã xuất hiện ở bất kỳ phần nào của bài (kiểm tra trước khi quyết
 định viết lại), xoá dòng lặp lại prompt, chỉ đưa từ khóa vào dàn ý/mở bài/kết luận, bỏ H2 rỗng.
 
+### 2.5 Lần chạy 5 (run 39903514077, commit 66ecdc6) — PASS toàn bộ
+| Bài | dtype | Số từ | H2 | QA | Thời gian |
+|---|---|---|---|---|---|
+| `vi-brief-q4f16` | q4f16 | 1.684 | 7 | 100 | 330 s |
+| `en-brief-q4f16` | q4f16 | 1.614 | 8 | 100 | 283 s |
+| `vi-general-q4` | q4 | 1.733 | 7 | 100 | 380 s (2 lần viết lại) |
+| `en-general-q4` | q4 | 1.403 | 7 | 95 (1 mục < 60 từ) | 229 s |
+| Chromium/WASM qua giao diện plugin, VI có brief | q4 | 1.637 | 7 + Kết luận | 85 (trừ 10 kể trải nghiệm, trừ 5 thiếu từ khóa) | 23,9 phút, 1,4–1,5 token/s, 10 lần gọi |
+
+Không còn trộn mục, lặp đoạn, câu chatbot hay tiêu đề rác. Lỗi nội dung vẫn còn (con người phải sửa): dùng "mua xe" thay
+vì thuê, xưng "tôi/chúng tôi", câu chung chung, một câu dẫn meta ở phần kết (đã thêm luật làm sạch sau lần chạy này).
+
 ## 3. Kiểm thử tự động (không dùng model)
 
 | Bộ kiểm thử | Kết quả cục bộ |
 |---|---|
-| `php tests/quality.php` (QA, gồm bài thật bị lỗi) | 27/27 |
+| `php tests/quality.php` (QA, gồm bài thật bị lỗi) | 28/28 |
 | `php tests/markdown.php` (Markdown → block) | 18/18 |
-| `node --test tests/js/*.test.mjs` (điều phối, Worker, lỗi thật của Qwen) | 24/24 |
+| `node --test tests/js/*.test.mjs` (điều phối, Worker, lỗi thật của Qwen) | 25/25 |
 | `wp eval-file tests/wp-integration.php` (WP 7.1.3 + SQLite, cùng plugin cũ 1.2.0) | 49/49 |
 | `tests/e2e/admin-ui.e2e.cjs` (Chromium, model giả, cùng plugin cũ) | 45/45 |
 | Smoke plugin cũ `tests/smoke-v120.php` | 27/27 |

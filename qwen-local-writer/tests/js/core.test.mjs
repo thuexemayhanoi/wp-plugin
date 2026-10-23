@@ -225,6 +225,14 @@ test('English articles use an English conclusion heading', async () => {
   assert.equal(out.headings.length, 5);
 });
 
+test('final real browser run 39903514077: "Dựa trên thông tin…, đây là nội dung kết cho bài viết:" is meta', () => {
+  const out = cleanPart('Dựa trên thông tin được cung cấp, đây là nội dung kết cho bài viết:\n\nThuê xe ở Long Biên cần xác nhận giá trước khi đặt.', { allowSubheadings: false });
+  assert.equal(out.text, 'Thuê xe ở Long Biên cần xác nhận giá trước khi đặt.');
+  assert.equal(cleanPart('Based on the facts, here is the conclusion:\nConfirm prices before booking.').text, 'Confirm prices before booking.');
+  // A real content line that merely contains "đây là" stays.
+  assert.equal(cleanPart('Đây là hai mẫu xe phổ biến tại Long Biên.').text, 'Đây là hai mẫu xe phổ biến tại Long Biên.');
+});
+
 test('a section left empty by repeated text is dropped instead of leaving a bare H2', async () => {
   const en = normalizeInput({ title: 'Renting a motorbike in Hanoi', language: 'en' });
   const same = Array.from({ length: 20 }, (_, i) => `Sentence ${i} gives the same riding tip every single time.`).join(' ');

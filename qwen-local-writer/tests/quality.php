@@ -85,6 +85,9 @@ check($kw_missing['score'] === $long['score'] - 5 && $kw_ok['score'] === $long['
 $think = Quality::assess(vi_article(8, 7, '<think>suy nghĩ</think>'), 1500, 'vi');
 check($think['score'] < $long['score'], 'leftover <think> tags are penalised');
 
+$lead = Quality::assess(vi_article(8, 7, "\n\nDựa trên thông tin được cung cấp, đây là nội dung kết cho bài viết:\n\nKết thúc."), 1500, 'vi');
+check(in_array('meta', array_column(array_filter($lead['checks'], static fn ($c) => !$c['pass']), 'id'), true), '"đây là nội dung kết cho bài viết:" lead-in is meta');
+
 $stamp = Quality::assess(vi_article(8, 7, 'Giá cả: Từ 1792728377936, bạn có thể tham khảo thêm.'), 1500, 'vi', $brief);
 check(in_array('1792728377936', $stamp['unverified'], true), 'long bare numbers copied by the model are flagged');
 

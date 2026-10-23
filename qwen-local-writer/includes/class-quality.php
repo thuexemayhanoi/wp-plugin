@@ -17,7 +17,7 @@ final class Quality {
     private const UNSAFE_RE = '/<\s*(?:script|iframe|style|form|svg|object|embed)\b|<\?php|javascript\s*:|\bon[a-z]+\s*=\s*["\']/iu';
 
     /** Mirrors META_LINE_RE in assets/qlw-core.js. */
-    private const META_RE = '/^(?:đoạn|phần)\s+(?:văn|mở bài|mở đầu|giới thiệu|kết luận|kết|này|tiếp theo)\b.{0,160}\b(?:như sau|sau đây|tóm tắt|nhấn mạnh|gồm có|sẽ (?:giới thiệu|trình bày|nói))\b|(?:có thể|được|sẽ) (?:được )?viết (?:lại )?như sau\s*[:：]?\s*$|^\(?\s*(?:[^()\n]{0,40}\s)?\d+\s*(?:từ|words?)\b[^()\n]{0,30}\)?\.?$|^(?:đề xuất|gợi ý)\s+thêm\s+(?:một\s+)?danh sách|^(?:this|the)\s+(?:section|paragraph|introduction|conclusion|article)\s+(?:will|should|can|summari[sz]es|highlights)\b|^(?:here is|here\'s|below is|sure[,!])\b|^(?:word count|note)\s*[:：]/iu';
+    private const META_RE = '/^(?:đoạn|phần)\s+(?:văn|mở bài|mở đầu|giới thiệu|kết luận|kết|này|tiếp theo)\b.{0,160}\b(?:như sau|sau đây|tóm tắt|nhấn mạnh|gồm có|sẽ (?:giới thiệu|trình bày|nói))\b|(?:có thể|được|sẽ) (?:được )?viết (?:lại )?như sau\s*[:：]?\s*$|^\(?\s*(?:[^()\n]{0,40}\s)?\d+\s*(?:từ|words?)\b[^()\n]{0,30}\)?\.?$|^(?:đề xuất|gợi ý)\s+thêm\s+(?:một\s+)?danh sách|^(?:this|the)\s+(?:section|paragraph|introduction|conclusion|article)\s+(?:will|should|can|summari[sz]es|highlights)\b|^(?:here is|here\'s|below is|sure[,!])\b|^(?:word count|note)\s*[:：]|(?:^|[,;]\s*)(?:đây là|sau đây là|dưới đây là)\s+(?:nội dung|đoạn|phần|bài)\b[^\n]{0,80}[:：]\s*$|(?:^|[,;]\s*)here (?:is|are) (?:the|a|an|my)\s[^\n]{0,80}[:：]\s*$/iu';
 
     public static function strip_markers(string $line): string {
         $value = str_replace(['**', '__', '`'], '', $line);
