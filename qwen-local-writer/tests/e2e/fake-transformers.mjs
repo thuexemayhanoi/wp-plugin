@@ -38,6 +38,11 @@ export async function pipeline(task, model, opts = {}) {
   }
   const generator = async (messages, gen) => {
     call++;
+    if (options.crashOnCall && call === options.crashOnCall) {
+      // An uncaught error kills the Worker's task the way an out-of-memory abort does.
+      setTimeout(() => { throw new Error('fake: worker crashed (simulated out-of-memory)'); }, 50);
+      return new Promise(() => {});
+    }
     const prompt = messages.at(-1).content;
     const lang = /^Article: /m.test(prompt) ? 'en' : 'vi';
     let text;

@@ -1,5 +1,15 @@
 # Changelog
 
+## Qwen Local Writer 0.3.0-beta — 2026-10-23
+- **QA chia nhóm**: Kỹ thuật / Kiểm chứng dữ kiện / SEO, cộng bước **Biên tập** do con người xác nhận trong trình soạn bài (lưu người và thời gian, tự bỏ khi Qwen viết lại). Điểm 70 vẫn là ngưỡng nội bộ; báo cáo không bao giờ ghi "đã xác minh".
+- **Kiểm chứng dữ kiện** dựng từ lỗi thật của Qwen3-0.6B: giá gắn sai mẫu xe so với brief (bắt được "Honda Vision 2.000.000đ/tuần" khi brief ghi 1.000.000đ), xe xăng bị gọi là xe điện, "thị trấn Long Biên"/Hà Nội + Tây Nguyên, lẫn mua/thuê trong bài thuê xe, hứa "không cần cọc", khẳng định "nổi tiếng/hàng đầu/thành lập năm", đánh giá sao và nguồn "nghiên cứu" tự bịa, năm không có trong brief. Danh sách *Câu cần kiểm chứng* hiện trong giao diện và hộp meta.
+- **SEO**: H2 nhồi từ khóa/tiền tố, độ dài tiêu đề, từ khóa trong tiêu đề, phát hiện bài gần trùng tiêu đề/nội dung với bài đã có (so cụm 5 từ). Điền từ khóa chính cho Yoast SEO/Rank Math khi đang bật (không ghi đè).
+- **An toàn dữ liệu**: không ghi đè bản nháp của người dùng khác (`not_owner`), dù vai trò Biên tập viên được sửa bài của người khác.
+- **Ổn định**: lưu khôi phục cả khi token đang chạy (3 giây/lần); Worker sập được báo đúng ("dừng đột ngột, thường do thiếu RAM") thay vì "trình duyệt quá cũ" và không còn lỗi chưa xử lý trên trang; nút *Giải phóng bộ nhớ*; cập nhật `qlw_version` khi thay ZIP (nâng/hạ phiên bản).
+- **Viết bài**: prompt bài thuê xe nói rõ "THUÊ xe, không phải mua bán"; bỏ tiền tố từ khóa lặp ở mọi H2 và dòng nhắc lại tiêu đề mục.
+- **Dữ kiện đã xác minh của cửa hàng** (cài đặt quản trị) + nút chèn vào brief khi cần.
+- **Kiểm thử**: QA 53, JS 27, tích hợp WordPress 66, E2E 59 (thêm: Worker sập, tải lại giữa chừng, giải phóng bộ nhớ, chèn dữ kiện, xác nhận biên tập qua block editor), `tests/rollback.sh` (0.3.0-beta ↔ 0.2.0-beta), CI chạy thêm cùng WooCommerce + Yoast SEO + Rank Math.
+
 ## Qwen Local Writer 0.2.0-beta — 2026-10-23 (plugin riêng trong `qwen-local-writer/`)
 - Bỏ import thư viện từ CDN: Transformers.js 4.3.1 + ONNX Runtime Web 1.31.0-dev được đóng gói trong ZIP, lấy từ npm và kiểm tra sha512/sha256 (`scripts/vendor_qwen_deps.py`, `assets/vendor/manifest.json`).
 - Ghim model `onnx-community/Qwen3-0.6B-ONNX` revision `58ca03a5e7b354b480b1a82b34bde8dc7b854cc0`; chỉ cho phép model này.

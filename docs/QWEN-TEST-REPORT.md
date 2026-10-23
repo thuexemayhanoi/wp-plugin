@@ -1,4 +1,4 @@
-# Qwen Local Writer 0.2.0-beta — báo cáo kiểm thử
+# Qwen Local Writer — báo cáo kiểm thử (0.2.0-beta → 0.3.0-beta)
 
 Ngày: 2026-10-23 · Nhánh `feat/qwen-local-no-paid-api` · PR #1
 
@@ -110,13 +110,29 @@ Bài trong trình duyệt lộ thêm 2 lỗi trình bày, đã sửa sau lần c
 ngay trên đoạn đầu (nay bị bỏ). Lỗi nội dung vẫn còn: "mua xe" thay vì thuê, câu vô nghĩa ("xe có thể thổi bóng"),
 NAP chép từ brief nhưng viết tắt sai ("Đn:"). QA 100 **không** có nghĩa là bài đúng — vẫn phải biên tập.
 
+### 2.7 0.3.0-beta: chấm lại bài thật bằng QA mới (kiểm chứng dữ kiện + SEO)
+Cùng các bài gốc trong `docs/qwen-samples/`, cùng brief như CI, chấm bằng QA 0.3.0 (không chạy lại model):
+
+| Bài | QA 0.2.0 | QA 0.3.0 | Cảnh báo mới |
+|---|---|---|---|
+| `vi-brief-q4f16` | 100 | 80 | giá "Honda Vision 2.000.000đ/tuần" **khác brief** (1.000.000đ/tuần); 2 câu "mua xe" trong bài thuê xe |
+| `en-brief-q4f16` | 100 | 100 | — (không thấy mẫu sai đã biết; **không** có nghĩa là bài đúng) |
+| `vi-general-q4` | 100 | 100 | — |
+| `en-general-q4` | 95 | 95 | 1 mục < 60 từ |
+| `browser-vi-wasm` | 85 | 60 | 6 câu "người mua/mua xe", 1 câu "chúng tôi đã…", câu dẫn meta ở kết luận (đã có luật làm sạch), thiếu nguyên văn từ khóa |
+| fixture lỗi (run 1) | 60 | 55 | thêm cảnh báo H2 lặp tiền tố |
+
+Lần chạy model thật cho commit 0.3.0-beta cuối (prompt "THUÊ, không phải mua bán" mới) được ghi trong
+[FINAL-AUDIT-REPORT.md](FINAL-AUDIT-REPORT.md) mục 8 và PR #1.
+
 ## 3. Kiểm thử tự động (không dùng model)
 
 | Bộ kiểm thử | Kết quả cục bộ |
 |---|---|
-| `php tests/quality.php` (QA, gồm bài thật bị lỗi) | 28/28 |
+| `php tests/quality.php` (QA, gồm câu và bài thật bị lỗi) | 53/53 |
 | `php tests/markdown.php` (Markdown → block) | 18/18 |
-| `node --test tests/js/*.test.mjs` (điều phối, Worker, lỗi thật của Qwen) | 26/26 |
-| `wp eval-file tests/wp-integration.php` (WP 7.1.3 + SQLite, cùng plugin cũ 1.2.0) | 49/49 |
-| `tests/e2e/admin-ui.e2e.cjs` (Chromium, model giả, cùng plugin cũ) | 45/45 |
+| `node --test tests/js/*.test.mjs` (điều phối, Worker, lỗi thật của Qwen) | 27/27 |
+| `wp eval-file tests/wp-integration.php` (WP 7.1.3 + SQLite, cùng plugin cũ 1.2.0) | 66/66 |
+| `tests/rollback.sh` (0.3.0-beta ↔ 0.2.0-beta, dữ liệu giữ nguyên) | PASS |
+| `tests/e2e/admin-ui.e2e.cjs` (Chromium, model giả, cùng plugin cũ) | 59/59 |
 | Smoke plugin cũ `tests/smoke-v120.php` | 27/27 |

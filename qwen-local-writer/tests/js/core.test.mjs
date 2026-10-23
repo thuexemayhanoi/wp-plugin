@@ -269,6 +269,16 @@ test('real browser run 39907043073: keyword prefix on every H2, title restated a
     'Giá thuê xe máy thay đổi theo mẫu xe và thời gian thuê.');
 });
 
+test('rental articles tell the model it is about renting, not buying (real runs wrote "người mua")', () => {
+  const rental = normalizeInput({ title: 'Thuê xe máy ở Long Biên: lưu ý trước khi nhận xe' });
+  const other = normalizeInput({ title: 'Cách bảo quản xe tay ga trong mùa mưa ở Hà Nội' });
+  const english = normalizeInput({ title: 'How to Rent a Motorbike in Hanoi', language: 'en' });
+  const prompt = messages => messages.map(m => m.content).join('\n');
+  assert.match(prompt(sectionMessages(rental, ['Giấy tờ cần mang'], 0, 200)), /THUÊ xe .*không phải mua bán/);
+  assert.doesNotMatch(prompt(sectionMessages(other, ['Lau khô xe sau mưa'], 0, 200)), /THUÊ xe/);
+  assert.match(prompt(outlineMessages(english)), /RENTING a bike/);
+});
+
 test('a section left empty by repeated text is dropped instead of leaving a bare H2', async () => {
   const en = normalizeInput({ title: 'Renting a motorbike in Hanoi', language: 'en' });
   const same = Array.from({ length: 20 }, (_, i) => `Sentence ${i} gives the same riding tip every single time.`).join(' ');
@@ -288,4 +298,7 @@ test('errors are classified for accurate messages', () => {
   assert.equal(classifyError('GPUDevice was lost'), 'DEVICE_LOST');
   assert.match(explainError(Object.assign(new Error('x'), { code: 'NO_WEBGPU' })), /WASM/);
   assert.match(explainError(new Error('Failed to fetch'), 'en'), /Network error/);
+  // E2E found a crashed Worker reported as "browser too old"; a crash has its own message.
+  assert.match(explainError(Object.assign(new Error('Worker lỗi: Uncaught Error'), { code: 'WORKER_CRASHED' })), /dừng đột ngột/);
+  assert.match(explainError(Object.assign(new Error('x'), { code: 'UNSUPPORTED' })), /quá cũ/);
 });

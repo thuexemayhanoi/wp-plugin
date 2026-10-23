@@ -156,6 +156,64 @@ $contrib_post = (int) ($r8['json']['data']['post_id'] ?? 0);
 $check($contrib_post && get_post_status($contrib_post) === 'draft' && (int) get_post_field('post_author', $contrib_post) === $contributor, 'contributor can create own draft');
 $check(!current_user_can('publish_posts') && get_post_status($contrib_post) === 'draft', 'contributor draft stays unpublished');
 
+// Editors may edit others' posts in WordPress, but this tool never overwrites someone else's draft.
+wp_set_current_user($editor);
+$nonce_editor = wp_create_nonce('qlw-save-draft');
+$r9 = $call('qlw_save_draft', ['nonce' => $nonce_editor, 'post_id' => (string) $dup_id, 'allow_duplicate' => '1'] + $base, $editor);
+$check($r9['status'] === 403 && ($r9['json']['data']['code'] ?? '') === 'not_owner', "editor cannot overwrite the administrator's Qwen draft (not_owner)");
+$check((int) get_post_field('post_author', $dup_id) === $admin, 'draft owner unchanged');
+
+// Grouped QA and near-duplicate detection against existing posts ($post_id is published with the same text).
+$r10 = $call('qlw_qa_preview', ['title' => 'Bài khác hoàn toàn ' . wp_generate_password(5, false)] + $base, $admin);
+$qa = $r10['json']['data']['qa'] ?? [];
+$failed = array_column(array_filter($qa['checks'] ?? [], static fn ($c) => !$c['pass']), 'id');
+$check(isset($qa['groups']['technical'], $qa['groups']['factual'], $qa['groups']['seo']) && ($qa['editorial'] ?? '') === 'not_reviewed', 'QA preview returns technical/factual/SEO groups and editorial = not_reviewed');
+// On a reused test site many earlier posts share this text; any of them may be listed, so only require an ID.
+$check(in_array('similar-content', $failed, true) && preg_match('/Nội dung trùng nhiều với bài đã có: #\d+ \(\d+%\)/u', implode(' ', array_column($qa['checks'], 'message'))), 'copying an existing post is flagged as duplicate content with post IDs');
+$similar = \QLW\Ajax::similar_posts($title, $markdown, $post_id, 'thuê xe');
+$check(!in_array($post_id, array_column($similar, 'id'), true), 'the draft being edited is not compared with itself');
+$r11 = $call('qlw_qa_preview', ['markdown' => $markdown . "\n\nHonda Vision 150.000đ/ngày, không cần đặt cọc."] + $base, $admin);
+$failed11 = array_column(array_filter($r11['json']['data']['qa']['checks'] ?? [], static fn ($c) => !$c['pass']), 'id');
+$check(in_array('price-mismatch', $failed11, true) && in_array('no-deposit', $failed11, true), 'wrong model price and "không cần đặt cọc" are flagged against the brief');
+
+// Focus keyword for Yoast SEO / Rank Math: only when one is active (forced here by the filter), never overwritten.
+$force_yoast = static fn () => ['_yoast_wpseo_focuskw'];
+add_filter('qlw_focus_keyword_meta_keys', $force_yoast);
+$r12 = $call('qlw_save_draft', ['title' => 'Từ khóa SEO ' . wp_generate_password(5, false)] + $base, $admin);
+$seo_post = (int) ($r12['json']['data']['post_id'] ?? 0);
+$check(get_post_meta($seo_post, '_yoast_wpseo_focuskw', true) === 'thuê xe', 'focus keyword stored for the active SEO plugin');
+update_post_meta($seo_post, '_yoast_wpseo_focuskw', 'từ khóa của biên tập viên');
+$call('qlw_save_draft', ['post_id' => (string) $seo_post, 'title' => get_the_title($seo_post)] + $base, $admin);
+$check(get_post_meta($seo_post, '_yoast_wpseo_focuskw', true) === 'từ khóa của biên tập viên', "an editor's focus keyword is never overwritten");
+remove_filter('qlw_focus_keyword_meta_keys', $force_yoast);
+if (defined('WPSEO_VERSION')) {
+    $check(in_array('_yoast_wpseo_focuskw', \QLW\Ajax::focus_keyword_keys(), true), 'Yoast SEO detected (version ' . WPSEO_VERSION . ')');
+}
+if (defined('RANK_MATH_VERSION')) {
+    $check(in_array('rank_math_focus_keyword', \QLW\Ajax::focus_keyword_keys(), true), 'Rank Math detected (version ' . RANK_MATH_VERSION . ')');
+}
+
+// Editorial sign-off: metabox checkbox with nonce + edit_post; a new Qwen save resets it.
+wp_set_current_user($admin);
+$_POST = ['qlw_editorial_nonce' => wp_create_nonce('qlw-editorial-' . $seo_post), 'qlw_editorial_reviewed' => '1'];
+\QLW\Plugin::save_editorial_review($seo_post, get_post($seo_post));
+$review = json_decode((string) get_post_meta($seo_post, '_qlw_editorial_review', true), true);
+$check(($review['user'] ?? 0) === $admin, 'editor sign-off stored with user and time');
+$_POST = ['qlw_editorial_reviewed' => ''];
+\QLW\Plugin::save_editorial_review($seo_post, get_post($seo_post));
+$check(get_post_meta($seo_post, '_qlw_editorial_review', true) !== '', 'a save without the metabox nonce does not clear the sign-off');
+wp_set_current_user($subscriber);
+$_POST = ['qlw_editorial_nonce' => wp_create_nonce('qlw-editorial-' . $seo_post)];
+\QLW\Plugin::save_editorial_review($seo_post, get_post($seo_post));
+$check(get_post_meta($seo_post, '_qlw_editorial_review', true) !== '', 'a user who cannot edit the post cannot change the sign-off');
+$call('qlw_save_draft', ['post_id' => (string) $seo_post, 'title' => get_the_title($seo_post), 'markdown' => $markdown . "\n\nĐoạn mới do Qwen viết lại."] + $base, $admin);
+$check(get_post_meta($seo_post, '_qlw_editorial_review', true) === '', 'rewriting the draft with Qwen resets the editorial sign-off');
+wp_set_current_user($admin);
+ob_start();
+\QLW\Plugin::render_metabox(get_post($seo_post));
+$box = ob_get_clean();
+$check(str_contains($box, 'qlw_editorial_reviewed') && str_contains($box, 'Kiểm chứng dữ kiện') && !str_contains($box, '<script'), 'metabox shows QA groups and the editorial checkbox, escaped');
+
 // Kses for users without unfiltered_html: content still safe and intact.
 $check(str_contains((string) get_post_field('post_content', $contrib_post), '<!-- wp:heading -->'), 'block comments survive kses for contributors');
 
@@ -176,6 +234,15 @@ foreach ([[$subscriber, false], [$contributor, true], [$admin, true]] as [$who, 
         $check(str_contains($html, 'model_source') === ($who === $admin), 'advanced settings shown only to administrators');
     }
 }
+// The public site never loads Qwen code (checked before the admin screen enqueues it in this process).
+wp_set_current_user(0);
+do_action('wp_enqueue_scripts');
+ob_start();
+wp_script_modules()->print_enqueued_script_modules();
+wp_print_styles();
+wp_print_scripts();
+$front = ob_get_clean();
+$check(!str_contains($front, 'qwen-local-writer') && !wp_style_is('qlw-admin', 'enqueued'), 'public frontend loads no Qwen script, module or style');
 wp_set_current_user($admin);
 set_current_screen('toplevel_page_qlw-local');
 do_action('admin_enqueue_scripts', 'toplevel_page_qlw-local');
@@ -196,6 +263,24 @@ try {
 } catch (QLW_Test_Die $e) {
     $check(\QLW\Plugin::settings()['model_source'] === 'huggingface', 'editor cannot change settings');
 }
+
+// Administrator saves verified business facts (sanitized); writers get them only as an insert button.
+add_filter('wp_redirect', static function () { throw new QLW_Test_Die(); }, -999);
+wp_set_current_user($admin);
+$_POST = ['_wpnonce' => wp_create_nonce('qlw-settings'), 'model_source' => 'huggingface', 'isolation' => '1', 'verified_facts' => "Honda Wave: 150.000đ/ngày\n<script>alert(1)</script>Điện thoại: 0942 467 674"];
+$_REQUEST = $_POST;
+try {
+    \QLW\Plugin::save_settings();
+} catch (QLW_Test_Die $e) {
+}
+$facts = \QLW\Plugin::settings()['verified_facts'];
+$check(str_contains($facts, 'Honda Wave: 150.000đ/ngày') && !str_contains($facts, '<script'), 'verified facts saved and sanitized');
+wp_set_current_user($author);
+$check(\QLW\Plugin::client_config()['verifiedFacts'] === $facts, 'writers receive the verified facts for the insert button');
+ob_start();
+\QLW\Plugin::render();
+$check(str_contains(ob_get_clean(), 'id="qlw-insert-facts"'), 'insert-facts button shown when facts exist');
+update_option('qlw_settings', array_merge(\QLW\Plugin::settings(), ['verified_facts' => '']), false);
 
 // Deactivation keeps data.
 deactivate_plugins('qwen-local-writer/qwen-local-writer.php');

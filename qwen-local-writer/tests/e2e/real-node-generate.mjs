@@ -60,11 +60,12 @@ for (const sample of samples) {
     writeFileSync(markdownOnly, article.markdown);
     const briefFile = path.join(out, sample.slug + '.brief.txt');
     writeFileSync(briefFile, sample.facts);
-    const qa = JSON.parse(execFileSync('php', [path.join(here, '../qa-cli.php'), markdownOnly, sample.language, briefFile, sample.keyword], { encoding: 'utf8' }));
+    const qa = JSON.parse(execFileSync('php', [path.join(here, '../qa-cli.php'), markdownOnly, sample.language, briefFile, sample.keyword, sample.title], { encoding: 'utf8' }));
     entry = {
       slug: sample.slug, title: sample.title, language: sample.language, dtype: sample.dtype,
       words: article.words, h2: qa.h2_count, qa: qa.score, ready: qa.ready_for_review,
-      failed_checks: qa.checks.filter(c => !c.pass).map(c => `${c.id}: ${c.message}`),
+      failed_checks: qa.checks.filter(c => !c.pass).map(c => `[${c.group}] ${c.id}: ${c.message}`),
+      fact_status: qa.fact_status, fact_check: qa.fact_check,
       calls: article.stats.calls, retries: article.stats.retries, continuations: article.stats.continuations,
       tokens: article.stats.tokens, seconds: Math.round((Date.now() - started) / 1000), warnings: article.stats.warnings,
     };
@@ -83,4 +84,6 @@ writeFileSync(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
 console.log('\n===== SUMMARY');
 console.table(report.samples.map(({ slug, words, h2, qa, ready, seconds, retries, continuations, error }) => ({ slug, words, h2, qa, ready, seconds, retries, continuations, error: error ? 'ERROR' : '' })));
 for (const s of report.samples) if (s.failed_checks?.length) console.log(s.slug, '→', s.failed_checks.join(' | '));
+// QA flags are leads for a human fact-checker, not proof either way.
+for (const s of report.samples) for (const f of s.fact_check || []) console.log(`${s.slug} fact-check [${f.type}] ${f.text}`);
 process.exit(failed ? 1 : 0);

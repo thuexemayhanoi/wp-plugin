@@ -44,7 +44,11 @@ async function login(page, user, pass) {
 }
 
 async function openWriter(page) {
-  const response = await page.goto(`${BASE}/wp-admin/admin.php?page=qlw-local`);
+  let response = await page.goto(`${BASE}/wp-admin/admin.php?page=qlw-local`);
+  // Other plugins (WooCommerce, SEO plugins) may redirect the first admin page after activation.
+  for (let i = 0; i < 3 && !page.url().includes('page=qlw-local'); i++) {
+    response = await page.goto(`${BASE}/wp-admin/admin.php?page=qlw-local`);
+  }
   await page.waitForSelector('#qlw-env li[data-ok]', { timeout: 30000 });
   return response;
 }
@@ -100,7 +104,10 @@ async function fillInput(page, title) {
 
     await page.click('#qlw-qa');
     await page.waitForSelector('#qlw-result .qlw-qa-score');
-    check(/QA kỹ thuật \d+\/100/.test(await page.textContent('#qlw-result')), 'QA preview shows a score');
+    check(/Điểm QA tự động \d+\/100/.test(await page.textContent('#qlw-result')), 'QA preview shows a score');
+    const groups = await page.$$eval('#qlw-result .qlw-qa-group[data-group]', nodes => nodes.map(n => n.dataset.group));
+    check(['technical', 'factual', 'seo'].every(g => groups.includes(g)), 'QA is shown in technical / factual / SEO groups: ' + groups.join(','));
+    check(/Biên tập \(con người\): chưa xác nhận/.test(await page.textContent('#qlw-result')), 'QA says the human editorial review is still pending');
 
     await page.click('#qlw-save');
     await page.waitForFunction(() => /bản NHÁP #\d+|Lỗi lưu nháp/.test(document.getElementById('qlw-result').textContent), null, { timeout: 30000 });
@@ -133,8 +140,12 @@ async function fillInput(page, title) {
 
     // Mobile-friendly layout of the same screen is checked below; screenshot desktop now.
     await page.screenshot({ path: path.join(OUT, 'desktop.png'), fullPage: true });
-    // WordPress core itself loads Gravatar avatars in the admin bar; anything else would be ours.
-    const foreign = context.external.filter(url => !/^https:\/\/secure\.gravatar\.com\/avatar\//.test(url));
+    // WordPress core itself loads Gravatar avatars in the admin bar; anything else would be ours —
+    // unless third-party plugins are active (E2E_THIRD_PARTY=1), then only model/CDN/AI hosts count.
+    const notGravatar = context.external.filter(url => !/^https:\/\/secure\.gravatar\.com\/avatar\//.test(url));
+    const aiOrCdn = /huggingface|hf\.co|jsdelivr|unpkg|esm\.sh|cdnjs|openai|anthropic|googleapis\.com\/v1|generativelanguage/i;
+    const foreign = process.env.E2E_THIRD_PARTY ? notGravatar.filter(url => aiOrCdn.test(url)) : notGravatar;
+    if (process.env.E2E_THIRD_PARTY && notGravatar.length) console.log('third-party plugin requests (not ours):', [...new Set(notGravatar.map(u => new URL(u).host))].join(', '));
     check(foreign.length === 0, 'no plugin request left this WordPress site (no CDN, no API): ' + foreign.slice(0, 3).join(', '));
     check(errors.length === 0, 'no uncaught page errors: ' + errors.join(' | '));
 
@@ -155,6 +166,17 @@ async function fillInput(page, title) {
     });
     check(validity.total > 10 && validity.invalid.length === 0, `block editor validates every block (${validity.total} blocks, invalid: ${validity.invalid.join(',') || 'none'}; ${validity.names.join(',')})`);
     check(await page.locator('#qlw-source').count() === 1, 'metabox with Markdown & QA is shown in the post editor');
+    // Editorial sign-off through the real block editor + classic metabox save.
+    // The meta-box pane of the block editor may be collapsed; tick the box directly, then save.
+    await page.$eval('input[name="qlw_editorial_reviewed"]', box => { box.checked = true; });
+    await page.evaluate(() => wp.data.dispatch('core/editor').savePost());
+    let review = '';
+    for (let i = 0; i < 40 && !review; i++) {
+      await page.waitForTimeout(500);
+      try { review = wp(`post meta get ${id} _qlw_editorial_review`); } catch { review = ''; }
+    }
+    check(/"user":\d+/.test(review), 'editorial sign-off is saved from the block editor metabox: ' + review);
+    check(wp(`post get ${id} --field=post_status`) === 'draft', 'signing off does not publish the draft');
     await context.close();
   }
 
@@ -173,6 +195,51 @@ async function fillInput(page, title) {
     await page.waitForFunction(() => /Đã dừng theo yêu cầu/.test(document.getElementById('qlw-progress').textContent), null, { timeout: 30000 });
     const partial = await page.inputValue('#qlw-markdown');
     check(partial.includes('## ') && !partial.includes('## Kết luận'), 'stop keeps the partial draft without inventing a conclusion');
+    // Free RAM without deleting the downloaded model, then load again.
+    await page.click('#qlw-unload');
+    await page.waitForFunction(() => /giải phóng bộ nhớ/.test(document.getElementById('qlw-model-status').textContent), null, { timeout: 30000 });
+    check(await page.isDisabled('#qlw-generate') && await page.isDisabled('#qlw-unload'), 'after freeing memory, writing is disabled until Qwen is loaded again');
+    check(/sẵn sàng/.test(await loadModel(page, 'wasm')), 'Qwen loads again after freeing memory');
+    check((await page.inputValue('#qlw-markdown')) === partial, 'freeing memory keeps the draft text');
+    await context.close();
+  }
+  {
+    // Reload in the middle of writing: the text streamed so far comes back from browser recovery.
+    const context = await newContext(browser, { fake: { tokenDelay: 20 } });
+    const page = await context.newPage();
+    await login(page, 'admin', 'admin-pass-123');
+    await openWriter(page);
+    await loadModel(page, 'wasm');
+    await fillInput(page, `Bài tải lại giữa chừng ${stamp}`);
+    page.on('dialog', d => d.accept().catch(() => {})); // "Leave site?" while writing
+    await page.click('#qlw-generate');
+    await page.waitForFunction(() => /H2 2\//.test(document.getElementById('qlw-progress').textContent), null, { timeout: 60000 });
+    await page.waitForTimeout(3500);
+    const before = await page.inputValue('#qlw-markdown');
+    await page.reload();
+    await page.waitForSelector('#qlw-env li[data-ok]');
+    const after = await page.inputValue('#qlw-markdown');
+    check(after.length > 200 && before.startsWith(after.slice(0, 200)) && /khôi phục/.test(await page.textContent('#qlw-result')), `reload during writing restores the streamed text (${after.length}/${before.length} chars)`);
+    await context.close();
+  }
+  {
+    // The Worker dies during a section: the error is reported and the partial draft is kept.
+    const context = await newContext(browser, { fake: { crashOnCall: 4 } });
+    const page = await context.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await login(page, 'admin', 'admin-pass-123');
+    await openWriter(page);
+    await loadModel(page, 'wasm');
+    await fillInput(page, `Bài Worker lỗi ${stamp}`);
+    page.on('dialog', d => d.accept().catch(() => {}));
+    await page.click('#qlw-generate');
+    await page.waitForFunction(() => /Chưa hoàn tất|Đã viết xong/.test(document.getElementById('qlw-progress').textContent), null, { timeout: 60000 });
+    const message = await page.textContent('#qlw-progress');
+    const kept = await page.inputValue('#qlw-markdown');
+    check(/Chưa hoàn tất: Worker chạy Qwen bị dừng đột ngột/.test(message) && kept.includes('## '), 'a crashed Worker is reported as a crash (not "old browser") and the partial draft is kept: ' + message.slice(0, 160));
+    check(!(await page.isDisabled('#qlw-load')) && await page.isDisabled('#qlw-generate'), 'after a crash Qwen can be loaded again');
+    check(errors.length === 0, 'the crash does not break the page: ' + errors.join(' | '));
     await context.close();
   }
   {
@@ -222,6 +289,18 @@ async function fillInput(page, title) {
     await page.check('input[name="model_source"][value="huggingface"]');
     await Promise.all([page.waitForURL(/qlw-saved=1/), page.click('.qlw-settings [type="submit"]')]);
     check(wp('option get qlw_settings --format=json').includes('"huggingface"'), 'settings saved back to Hugging Face');
+    // Verified business facts: saved by the administrator, inserted into a brief only on request.
+    await page.click('.qlw-settings summary');
+    await page.fill('#qlw-verified-facts', 'Cho Thuê Xe Máy Nguyễn Tú\nHonda Wave: 150.000đ/ngày\nHonda Vision: 200.000đ/ngày');
+    await Promise.all([page.waitForURL(/qlw-saved=1/), page.click('.qlw-settings [type="submit"]')]);
+    await page.waitForSelector('#qlw-env li[data-ok]');
+    check((await page.inputValue('#qlw-facts')) === '' || !(await page.inputValue('#qlw-facts')).includes('Honda Wave: 150.000đ'), 'verified facts are not pushed into the brief automatically');
+    await page.click('#qlw-insert-facts');
+    check((await page.inputValue('#qlw-facts')).includes('Honda Wave: 150.000đ/ngày'), 'the insert button adds the verified facts to the brief');
+    await page.click('.qlw-settings summary');
+    await page.fill('#qlw-verified-facts', '');
+    await Promise.all([page.waitForURL(/qlw-saved=1/), page.click('.qlw-settings [type="submit"]')]);
+    check(await page.locator('#qlw-insert-facts').count() === 0, 'no insert button when no verified facts are set');
     await context.close();
   }
 

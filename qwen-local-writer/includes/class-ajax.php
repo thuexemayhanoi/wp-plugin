@@ -54,7 +54,100 @@ final class Ajax {
     public static function qa_preview(): void {
         self::guard();
         $input = self::input();
-        wp_send_json_success(['qa' => Quality::assess($input['markdown'], 1500, $input['language'], $input['brief'], $input['keyword'])]);
+        $post_id = isset($_POST['post_id']) ? absint($_POST['post_id']) : 0;
+        wp_send_json_success(['qa' => self::assess($input, $post_id)]);
+    }
+
+    /** QA with the WordPress-dependent context: post title and similar existing posts. */
+    private static function assess(array $input, int $post_id): array {
+        return Quality::assess($input['markdown'], 1500, $input['language'], $input['brief'], $input['keyword'], [
+            'title' => $input['title'],
+            'similar' => self::similar_posts($input['title'], $input['markdown'], $post_id, $input['keyword']),
+        ]);
+    }
+
+    /** @return array<string,true> */
+    private static function shingles(string $text, int $size = 5): array {
+        $words = Quality::words(mb_strtolower($text));
+        $out = [];
+        for ($i = 0, $n = count($words) - $size; $i <= $n; $i++) {
+            $out[implode(' ', array_slice($words, $i, $size))] = true;
+        }
+        return $out;
+    }
+
+    /**
+     * Existing posts (any status the current user may read) whose title or text is close to the
+     * new draft: title word overlap (Jaccard) and the share of the draft's 5-word phrases that
+     * already appear in the post. Read-only; at most 20 candidates found by WordPress search.
+     *
+     * @return list<array{id:int,title:string,status:string,title_similarity:float,content_similarity:float}>
+     */
+    public static function similar_posts(string $title, string $markdown, int $exclude = 0, string $keyword = ''): array {
+        $title_words = array_values(array_filter(Quality::words(Quality::key($title)), static fn (string $w): bool => mb_strlen($w) >= 3));
+        $searches = array_filter(array_unique([trim($keyword), implode(' ', array_slice($title_words, 0, 3))]));
+        $ids = [];
+        foreach ($searches as $search) {
+            $query = new \WP_Query([
+                'post_type' => 'post',
+                'post_status' => ['publish', 'future', 'draft', 'pending', 'private'],
+                's' => $search,
+                'posts_per_page' => 20,
+                'fields' => 'ids',
+                'no_found_rows' => true,
+                'ignore_sticky_posts' => true,
+                'post__not_in' => $exclude ? [$exclude] : [],
+            ]);
+            $ids = array_merge($ids, array_map('intval', $query->posts));
+        }
+        $draft = self::shingles(mb_substr($markdown, 0, 60000));
+        $own_title = array_unique(Quality::words(Quality::key($title)));
+        $out = [];
+        foreach (array_slice(array_unique($ids), 0, 20) as $id) {
+            if ($id === $exclude || !current_user_can('read_post', $id)) {
+                continue;
+            }
+            $post = get_post($id);
+            if (!$post) {
+                continue;
+            }
+            $other_title = array_unique(Quality::words(Quality::key($post->post_title)));
+            $union = count(array_unique(array_merge($own_title, $other_title)));
+            $title_similarity = $union ? count(array_intersect($own_title, $other_title)) / $union : 0.0;
+            $text = (string) get_post_meta($id, '_qlw_markdown', true);
+            if ($text === '') {
+                $text = wp_strip_all_tags(strip_shortcodes((string) $post->post_content));
+            }
+            $existing = self::shingles(mb_substr($text, 0, 60000));
+            $content_similarity = $draft ? count(array_intersect_key($draft, $existing)) / count($draft) : 0.0;
+            if ($title_similarity >= 0.5 || $content_similarity >= 0.1) {
+                $out[] = [
+                    'id' => $id,
+                    'title' => $post->post_title,
+                    'status' => $post->post_status,
+                    'title_similarity' => round($title_similarity, 2),
+                    'content_similarity' => round($content_similarity, 2),
+                ];
+            }
+        }
+        usort($out, static fn (array $a, array $b): int => $b['content_similarity'] <=> $a['content_similarity'] ?: $b['title_similarity'] <=> $a['title_similarity']);
+        return array_slice($out, 0, 5);
+    }
+
+    /**
+     * Focus-keyword meta of SEO plugins that are active (Yoast SEO, Rank Math). Filterable.
+     *
+     * @return list<string>
+     */
+    public static function focus_keyword_keys(): array {
+        $keys = [];
+        if (defined('WPSEO_VERSION')) {
+            $keys[] = '_yoast_wpseo_focuskw';
+        }
+        if (defined('RANK_MATH_VERSION') || class_exists('RankMath')) {
+            $keys[] = 'rank_math_focus_keyword';
+        }
+        return array_values(array_filter((array) apply_filters('qlw_focus_keyword_meta_keys', $keys), 'is_string'));
     }
 
     public static function title_key(string $title): string {
@@ -131,6 +224,10 @@ final class Ajax {
             if (!current_user_can('edit_post', $post_id)) {
                 wp_send_json_error(['code' => 'forbidden', 'message' => 'Không có quyền sửa bài này.'], 403);
             }
+            // Editors may edit other people's posts in WordPress, but this tool never overwrites them.
+            if ((int) $existing->post_author !== get_current_user_id()) {
+                wp_send_json_error(['code' => 'not_owner', 'message' => 'Bản nháp #' . $post_id . ' thuộc người dùng khác; plugin không ghi đè. Bấm "Bắt đầu bài mới" để lưu thành nháp của bạn.'], 403);
+            }
             if ($existing->post_status !== 'draft') {
                 wp_send_json_error([
                     'code' => 'not_draft',
@@ -150,7 +247,7 @@ final class Ajax {
             }
         }
 
-        $report = Quality::assess($input['markdown'], 1500, $input['language'], $input['brief'], $input['keyword']);
+        $report = self::assess($input, $post_id);
         $use_blocks = (bool) apply_filters('qlw_use_block_markup', true);
         $args = [
             'post_type' => 'post',
@@ -162,7 +259,14 @@ final class Ajax {
                 '_qlw_title_key' => self::title_key($input['title']),
                 '_qlw_qa_score' => $report['score'],
                 '_qlw_qa_status' => $report['ready_for_review'] ? 'READY_FOR_HUMAN_REVIEW' : 'NEEDS_REVISION',
-                '_qlw_qa_report' => wp_json_encode(['score' => $report['score'], 'notes' => $report['notes'], 'unverified' => $report['unverified']], JSON_UNESCAPED_UNICODE),
+                '_qlw_qa_report' => wp_json_encode([
+                    'score' => $report['score'],
+                    'groups' => $report['groups'],
+                    'notes' => $report['notes'],
+                    'unverified' => $report['unverified'],
+                    'fact_check' => array_slice($report['fact_check'], 0, 15),
+                    'fact_status' => $report['fact_status'],
+                ], JSON_UNESCAPED_UNICODE),
                 '_qlw_language' => $input['language'],
                 '_qlw_keyword' => $input['keyword'],
                 '_qlw_brief' => $input['brief'],
@@ -182,6 +286,18 @@ final class Ajax {
         }
         if (is_wp_error($result) || !$result) {
             wp_send_json_error(['code' => 'insert', 'message' => 'Không lưu được bản nháp WordPress' . (is_wp_error($result) ? ': ' . $result->get_error_message() : '.')], 500);
+        }
+        if ($post_id) {
+            // The text changed, so an earlier editorial sign-off no longer applies.
+            delete_post_meta($post_id, '_qlw_editorial_review');
+        }
+        if ($input['keyword'] !== '') {
+            foreach (self::focus_keyword_keys() as $meta_key) {
+                // Never replace a focus keyword an editor already set.
+                if ((string) get_post_meta((int) $result, $meta_key, true) === '') {
+                    update_post_meta((int) $result, $meta_key, $input['keyword']);
+                }
+            }
         }
         $saved = get_post((int) $result);
         wp_send_json_success([

@@ -101,4 +101,69 @@ check(in_array('heading-format', $failed, true) && in_array('bleed', $failed, tr
 $dup = Quality::assess(vi_article() . "\n\n## Phần 1: lưu ý về giấy tờ\n\n" . str_repeat('Một câu mới khác biệt hoàn toàn để đủ độ dài cho phần này. ', 8), 1500, 'vi');
 check(in_array('dup-heading', array_column(array_filter($dup['checks'], static fn ($c) => !$c['pass']), 'id'), true), 'duplicate H2 headings are flagged');
 
+/* ---------- 0.3.0: grouped QA and fact checks built from real Qwen3-0.6B mistakes ---------- */
+$failed_ids = static fn (array $qa): array => array_column(array_filter($qa['checks'], static fn ($c) => !$c['pass']), 'id');
+$groups_of = array_unique(array_column($long['checks'], 'group'));
+check(array_diff(['technical', 'factual'], $groups_of) === [] && isset($long['groups']['seo'], $long['groups']['editorial']), 'checks are grouped: technical, factual, seo (+ editorial, manual)');
+check($long['fact_status'] === 'not_verified' && $long['editorial'] === 'not_reviewed', 'a clean article is "not verified", never "verified"; editorial review is not automatic');
+
+$nguyen_tu = "Thương hiệu: Cho Thuê Xe Máy Nguyễn Tú\nĐịa chỉ: 112 Nguyễn Văn Cừ, Bồ Đề, Long Biên, Hà Nội\nĐiện thoại: 0942 467 674\nWebsite: https://thuexemaynguyentu.com/\nHonda Wave: 150.000đ/ngày\nHonda Vision: 200.000đ/ngày\nHonda Air Blade: 200.000đ/ngày\nXe tay ga 50cc: 200.000đ/ngày\nTiền cọc tùy dòng xe, không tự suy diễn mức cụ thể.";
+$prices = Quality::brief_prices($nguyen_tu);
+check(($prices['wave'] ?? null) === [150000.0] && ($prices['air blade'] ?? null) === [200000.0] && ($prices['50cc'] ?? null) === [200000.0], 'brief prices are parsed per model: ' . json_encode($prices));
+$rental = ['title' => 'Thuê xe máy ở Long Biên: lưu ý trước khi nhận xe'];
+
+// Real runs: "một chiếc xe điện thông minh như Honda Air Blade" (run 39898298326).
+$fuel = Quality::assess(vi_article(8, 7, 'Ngoài ra, việc lựa chọn một chiếc xe điện thông minh như Honda Air Blade sẽ giúp bạn tiết kiệm.'), 1500, 'vi', $nguyen_tu, '', $rental);
+check(in_array('fuel', $failed_ids($fuel), true) && $fuel['fact_status'] === 'flagged', 'Air Blade described as an electric bike is flagged');
+$list = Quality::assess(vi_article(8, 7, 'Cửa hàng có Honda Wave, Vision, Air Blade, xe tay ga 50cc và xe điện. Honda Air Blade không phải xe điện.'), 1500, 'vi', $nguyen_tu, '', $rental);
+check(!in_array('fuel', $failed_ids($list), true), 'a list of vehicle types or "không phải xe điện" is not a fuel claim');
+
+// "Trong thị trấn Long Biên", "Trong một thị trấn yên tĩnh, Hà Nội", "In Hanoi, particularly in regions like the Central Highlands".
+foreach (['Trong thị trấn Long Biên, người thuê xe rất đông.', 'Trong một thị trấn yên tĩnh, Hà Nội, người xưa đi bộ nhiều.'] as $sentence) {
+    check(in_array('geography', $failed_ids(Quality::assess(vi_article(8, 7, $sentence), 1500, 'vi')), true), 'wrong Hanoi geography is flagged: ' . $sentence);
+}
+check(in_array('geography', $failed_ids(Quality::assess(en_article() . "\n\nIn Hanoi, particularly in regions like the Central Highlands, 50cc scooters are common.", 1500, 'en')), true), 'Hanoi + Central Highlands is flagged');
+check(!in_array('geography', $failed_ids(Quality::assess(vi_article(8, 7, 'Cửa hàng ở 112 Nguyễn Văn Cừ, Bồ Đề, Long Biên, Hà Nội.'), 1500, 'vi', $nguyen_tu)), true), 'the real address is not a geography flag');
+
+// "người mua", "trước khi mua xe" in a rental article (runs 39903514077, 39907043073).
+$buy = Quality::assess(vi_article(8, 7, 'Người mua cần kiểm tra giá trước khi mua xe. Việc đặt mua xe cần cẩn thận. Giá bán xe thay đổi.'), 1500, 'vi', $nguyen_tu, '', $rental);
+check(in_array('rent-buy', $failed_ids($buy), true), 'buying/selling language in a rental article is flagged');
+check(!in_array('rent-buy', $failed_ids(Quality::assess(vi_article(8, 7, 'Người mua cần kiểm tra giá.'), 1500, 'vi', '', '', ['title' => 'Kinh nghiệm mua xe máy cũ'])), true), 'buying language is fine in a buying article');
+
+// Swapped prices: Wave is 150.000đ, Vision 200.000đ in the brief.
+$swap = Quality::assess(vi_article(8, 7, 'Honda Vision 150.000đ/ngày rất phù hợp cho sinh viên.'), 1500, 'vi', $nguyen_tu, '', $rental);
+check(in_array('price-mismatch', $failed_ids($swap), true) && $swap['unverified'] === [], 'a brief price attached to the wrong model is caught although the number exists in the brief');
+$right = Quality::assess(vi_article(8, 7, 'Honda Vision 200.000đ/ngày hoặc Honda Wave 150.000 đồng/ngày, Air Blade 200,000 VND/day, xe tay ga 50cc 200.000đ.'), 1500, 'vi', $nguyen_tu, '', $rental);
+check(!in_array('price-mismatch', $failed_ids($right), true) && $right['unverified'] === [], 'correct model prices in several formats pass: ' . implode(' | ', $right['unverified']));
+$deposit_amount = Quality::assess(vi_article(8, 7, 'Honda Vision 200.000đ/ngày, cọc 4–5 triệu.'), 1500, 'vi', $nguyen_tu, '', $rental);
+check(!in_array('price-mismatch', $failed_ids($deposit_amount), true) && in_array('5 triệu', $deposit_amount['unverified'], true), 'an invented deposit is "unverified", not a model-price mismatch');
+
+$no_deposit = Quality::assess(vi_article(8, 7, 'Cửa hàng cho thuê xe không cần đặt cọc.'), 1500, 'vi', $nguyen_tu, '', $rental);
+check(in_array('no-deposit', $failed_ids($no_deposit), true), '"không cần đặt cọc" without a brief is flagged');
+
+// "Nguyễn Tú – người đã từng là một nhà thiết kế nổi tiếng" (run 39898298326).
+$claim = Quality::assess(vi_article(8, 7, 'Nguyễn Tú – người đã từng là một nhà thiết kế nổi tiếng, thành lập năm 2015, là đơn vị hàng đầu.'), 1500, 'vi', $nguyen_tu);
+check(in_array('claims', $failed_ids($claim), true) && in_array('2015', $claim['unverified'], true), 'unverifiable claims and invented years are flagged');
+$reviews = Quality::assess(vi_article(8, 7, 'Khách hàng đánh giá dịch vụ 5 sao. Tại sao nên thuê xe?'), 1500, 'vi');
+check(in_array('reviews', $failed_ids($reviews), true), 'invented customer reviews/ratings are flagged');
+check(!in_array('reviews', $failed_ids(Quality::assess(vi_article(8, 7, 'Tại sao nên kiểm tra phanh? Vì sao cần mũ bảo hiểm?'), 1500, 'vi')), true), '"tại sao"/"vì sao" is not a star rating');
+$sources = Quality::assess(en_article() . "\n\nAccording to a recent study, 80% of riders prefer automatic scooters.", 1500, 'en');
+check(in_array('sources', $failed_ids($sources), true) && in_array('80%', $sources['unverified'], true), 'invented studies and statistics are flagged');
+$me = Quality::assess(vi_article(8, 7, 'Theo kinh nghiệm của mình, xe số dễ đi.'), 1500, 'vi');
+check(in_array('experience', $failed_ids($me), true) && $me['fact_check'][0]['type'] === 'experience', 'first-person experience appears in the fact-check list');
+
+// A real-looking article can score 100 on structure; factual flags must still lower it.
+check($fuel['score'] < $long['score'] && $swap['score'] <= $long['score'] - 15, 'factual errors lower the score (QA 100 is no longer possible with these errors)');
+
+// SEO: keyword prefix on every H2 (run 39907043073), title length, similarity context.
+$prefixed = preg_replace_callback('/^## (.+)$/mu', static fn ($m) => '## Thuê xe máy Long Biên: ' . $m[1], vi_article());
+$stuffed = Quality::assess($prefixed, 1500, 'vi', '', 'thuê xe máy Long Biên', $rental);
+check(in_array('heading-stuffing', $failed_ids($stuffed), true), 'the same keyword prefix on every H2 is keyword stuffing');
+$short_title = Quality::assess(vi_article(), 1500, 'vi', '', '', ['title' => 'Thuê xe']);
+check(in_array('title-length', $failed_ids($short_title), true) && $short_title['score'] === $long['score'], 'title length is a warning without penalty');
+$similar = Quality::assess(vi_article(), 1500, 'vi', '', '', ['similar' => [['id' => 12, 'title' => 'x', 'title_similarity' => 0.8, 'content_similarity' => 0.62]]]);
+check(in_array('similar-content', $failed_ids($similar), true) && in_array('similar-title', $failed_ids($similar), true) && $similar['score'] === $long['score'] - 25, 'near-duplicate posts are flagged (content 62% → -20, title → -5)');
+$unique = Quality::assess(vi_article(), 1500, 'vi', '', '', ['similar' => []]);
+check(!array_intersect(['similar-content', 'similar-title'], $failed_ids($unique)), 'no similar posts, no flag');
+
 finish('Quality');

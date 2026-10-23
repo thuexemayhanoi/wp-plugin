@@ -14,7 +14,7 @@ if (root) {
   const config = JSON.parse(root.dataset.config || '{}');
   const $ = id => document.getElementById('qlw-' + id);
   const ui = {
-    env: $('env'), device: $('device'), load: $('load'), clear: $('clear-cache'),
+    env: $('env'), device: $('device'), load: $('load'), unload: $('unload'), clear: $('clear-cache'), insertFacts: $('insert-facts'),
     downloadWrap: $('download-wrap'), download: $('download'), downloadText: $('download-text'), modelStatus: $('model-status'),
     title: $('title-input'), keyword: $('keyword'), language: $('language'), category: $('category'), facts: $('facts'), factsCount: $('facts-count'),
     generate: $('generate'), stop: $('stop'), writeWrap: $('write-wrap'), write: $('write'), writeText: $('write-text'), progress: $('progress'),
@@ -60,6 +60,13 @@ if (root) {
   const clearRecovery = () => { try { localStorage.removeItem(storeKey); } catch { /* ignore */ } };
   let persistTimer = 0;
   const schedulePersist = () => { clearTimeout(persistTimer); persistTimer = setTimeout(persist, 400); };
+  // While tokens stream in, a debounce would never fire: save at most every 3 seconds instead.
+  let lastPersist = 0;
+  const persistThrottled = () => {
+    if (Date.now() - lastPersist < 3000) return;
+    lastPersist = Date.now();
+    persist();
+  };
 
   function updateCounts() {
     const words = countWords(ui.editor.value);
@@ -89,14 +96,18 @@ if (root) {
       return Promise.reject(Object.assign(new Error('Không tạo được Worker: ' + error.message), { code: 'UNSUPPORTED' }));
     }
     state.worker = worker;
+    let started = false;
     state.ready = new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(Object.assign(new Error('Worker không khởi động sau 30 giây.'), { code: 'UNSUPPORTED' })), 30000);
       worker.addEventListener('message', ({ data }) => {
-        if (data?.type === 'ready') { clearTimeout(timer); URL.revokeObjectURL(bootstrap); resolve(); }
+        if (data?.type === 'ready') { started = true; clearTimeout(timer); URL.revokeObjectURL(bootstrap); resolve(); }
       });
       worker.addEventListener('error', event => {
+        // Handled here: without preventDefault the error is also reported as an uncaught page error.
+        event.preventDefault();
         clearTimeout(timer);
-        const error = Object.assign(new Error('Worker lỗi: ' + (event.message || 'không tải được mã Worker (CSP/COEP?)')), { code: 'UNSUPPORTED' });
+        // Before "ready" the Worker could not start at all; afterwards it crashed (usually out of memory).
+        const error = Object.assign(new Error('Worker lỗi: ' + (event.message || 'không tải được mã Worker (CSP/COEP?)')), { code: started ? 'WORKER_CRASHED' : 'UNSUPPORTED' });
         for (const p of pending.values()) p.reject(error);
         pending.clear();
         state.worker = null;
@@ -183,12 +194,38 @@ if (root) {
       const fallback = loaded.attempts?.length ? ` Đã chuyển sang ${loaded.device.toUpperCase()} vì: ${loaded.attempts.map(a => a.device + ' lỗi').join(', ')}.` : '';
       say(ui.modelStatus, `Qwen đã sẵn sàng: ${loaded.device.toUpperCase()} · ${loaded.dtype} · khởi tạo ${loaded.seconds}s.${fallback}`, 'ok');
       ui.generate.disabled = false;
+      ui.unload.disabled = false;
       say(ui.progress, 'Nhập tiêu đề rồi bấm "Viết nháp ~1.500 từ".');
     } catch (error) {
       say(ui.modelStatus, 'Không tải được Qwen: ' + explainError(error), 'error');
     } finally {
       ui.load.disabled = false;
     }
+  });
+  // Frees the model's RAM/GPU memory now; the downloaded files stay in the browser cache.
+  ui.unload.addEventListener('click', async () => {
+    if (state.busy) return;
+    try {
+      await call('unload');
+    } catch { /* the Worker is terminated below anyway */ }
+    state.worker?.terminate();
+    state.worker = null;
+    state.ready = null;
+    state.loaded = null;
+    ui.generate.disabled = true;
+    ui.unload.disabled = true;
+    say(ui.modelStatus, 'Đã giải phóng bộ nhớ của Qwen. Bấm "Tải Qwen" để dùng lại (lấy từ cache, không tải lại).', 'info');
+  });
+  ui.insertFacts?.addEventListener('click', () => {
+    const facts = String(config.verifiedFacts || '').trim();
+    if (!facts) return;
+    if (ui.facts.value.includes(facts)) {
+      say(ui.result, 'Brief đã có dữ kiện đã xác minh.', 'info');
+      return;
+    }
+    ui.facts.value = (ui.facts.value.trim() ? ui.facts.value.trim() + '\n\n' : '') + facts;
+    updateCounts();
+    schedulePersist();
   });
   ui.clear.addEventListener('click', async () => {
     if (state.busy) return;
@@ -197,6 +234,7 @@ if (root) {
       const result = await call('clear-cache');
       state.loaded = null;
       ui.generate.disabled = true;
+      ui.unload.disabled = true;
       say(ui.modelStatus, result.removed ? 'Đã xóa cache model và giải phóng bộ nhớ.' : 'Không có cache model nào để xóa.', 'info');
     } catch (error) {
       say(ui.modelStatus, 'Không xóa được cache: ' + explainError(error), 'error');
@@ -235,6 +273,7 @@ if (root) {
       live += data.text;
       ui.editor.value = base + (base ? '\n\n' : '') + live;
       ui.editor.scrollTop = ui.editor.scrollHeight;
+      persistThrottled();
     };
     const generate = async (messages, params) => {
       live = '';
@@ -270,7 +309,7 @@ if (root) {
     } catch (error) {
       if (error.partialMarkdown) ui.editor.value = error.partialMarkdown;
       say(ui.progress, 'Chưa hoàn tất: ' + explainError(error) + ' Nội dung đã viết được giữ nguyên.', 'error');
-      if (error.code === 'DEVICE_LOST' || error.code === 'UNSUPPORTED') {
+      if (error.code === 'DEVICE_LOST' || error.code === 'UNSUPPORTED' || error.code === 'WORKER_CRASHED') {
         state.loaded = null;
         state.worker?.terminate();
         state.worker = null;
@@ -280,6 +319,7 @@ if (root) {
       state.busy = false;
       ui.editor.readOnly = false;
       ui.generate.disabled = !state.loaded;
+      ui.unload.disabled = !state.loaded;
       ui.load.disabled = false;
       ui.save.disabled = ui.qa.disabled = false;
       ui.stop.disabled = true;
@@ -321,33 +361,66 @@ if (root) {
     if (!json.success) throw Object.assign(new Error(json.data?.message || `Lỗi HTTP ${response.status}.`), { data: json.data || {}, status: response.status });
     return json.data;
   }
+  const GROUPS = [
+    ['technical', 'QA kỹ thuật'],
+    ['factual', 'Kiểm chứng dữ kiện'],
+    ['seo', 'SEO'],
+  ];
   function renderQa(qa, prefix) {
     const wrap = document.createElement('div');
     const head = document.createElement('p');
     head.className = 'qlw-qa-score';
     head.dataset.pass = qa.ready_for_review ? 'yes' : 'no';
-    head.textContent = `${prefix}QA kỹ thuật ${qa.score}/100 · ${fmt(qa.word_count)} từ · ${qa.h2_count} H2 — ` +
+    head.textContent = `${prefix}Điểm QA tự động ${qa.score}/100 · ${fmt(qa.word_count)} từ · ${qa.h2_count} H2 — ` +
       (qa.ready_for_review ? 'Đạt ngưỡng 70: đủ điều kiện để biên tập viên rà soát.' : 'Chưa đạt 70: cần sửa trước khi đăng.');
     wrap.append(head);
-    const list = document.createElement('ul');
-    list.className = 'qlw-checks';
-    for (const item of qa.checks || []) {
-      const li = document.createElement('li');
-      li.dataset.pass = item.pass ? 'yes' : 'no';
-      li.textContent = (item.pass ? 'Đạt: ' : `Trừ ${item.penalty}: `) + item.message;
-      list.append(li);
+    const checks = qa.checks || [];
+    for (const [group, label] of GROUPS) {
+      const items = checks.filter(item => (item.group || 'technical') === group);
+      if (!items.length) continue;
+      const summary = qa.groups?.[group];
+      const title = document.createElement('h3');
+      title.className = 'qlw-qa-group';
+      title.dataset.group = group;
+      title.textContent = summary ? `${label} — ${summary.failed ? `${summary.failed} mục cần xem, trừ ${summary.penalty} điểm` : 'không có cảnh báo'}` : label;
+      const list = document.createElement('ul');
+      list.className = 'qlw-checks';
+      for (const item of items) {
+        const li = document.createElement('li');
+        li.dataset.pass = item.pass ? 'yes' : 'no';
+        li.textContent = (item.pass ? 'Đạt: ' : item.penalty ? `Trừ ${item.penalty}: ` : 'Lưu ý: ') + item.message;
+        list.append(li);
+      }
+      wrap.append(title, list);
     }
-    wrap.append(list);
+    if (qa.fact_check?.length) {
+      const title = document.createElement('h3');
+      title.className = 'qlw-qa-group';
+      title.textContent = 'Câu cần kiểm chứng trước khi đăng';
+      const list = document.createElement('ul');
+      list.className = 'qlw-facts-list';
+      for (const item of qa.fact_check) {
+        const li = document.createElement('li');
+        const reason = document.createElement('strong');
+        reason.textContent = item.reason + ' ';
+        const text = document.createElement('q');
+        text.textContent = item.text;
+        li.append(reason, text);
+        list.append(li);
+      }
+      wrap.append(title, list);
+    }
     const note = document.createElement('p');
     note.className = 'qlw-muted';
-    note.textContent = 'Điểm này không xác minh sự thật, giá, luật hay nguồn tin.';
+    note.textContent = (qa.fact_status === 'flagged' ? 'Có chi tiết cần kiểm chứng. ' : 'Không thấy dấu hiệu sai đã biết — điều này KHÔNG có nghĩa là bài đúng. ') +
+      'Biên tập (con người): chưa xác nhận — mở bài nháp, kiểm chứng giá, địa chỉ, chính sách rồi tích ô "Biên tập" trong hộp Qwen Local Writer.';
     wrap.append(note);
     return wrap;
   }
   ui.qa.addEventListener('click', async () => {
     ui.qa.disabled = true;
     try {
-      const data = await post('qlw_qa_preview');
+      const data = await post('qlw_qa_preview', { post_id: String(state.postId || 0) });
       ui.result.replaceChildren(renderQa(data.qa, ''));
     } catch (error) {
       say(ui.result, 'Không chấm được QA: ' + error.message, 'error');

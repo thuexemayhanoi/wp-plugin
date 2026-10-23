@@ -30,6 +30,7 @@ $qlw_is_admin = current_user_can('manage_options');
       </p>
       <p class="qlw-actions">
         <button type="button" class="button button-primary" id="qlw-load" disabled>Tải Qwen vào trình duyệt</button>
+        <button type="button" class="button" id="qlw-unload" disabled>Giải phóng bộ nhớ</button>
         <button type="button" class="button" id="qlw-clear-cache">Xóa cache model</button>
       </p>
       <div class="qlw-progress" hidden id="qlw-download-wrap">
@@ -65,6 +66,10 @@ $qlw_is_admin = current_user_can('manage_options');
       <p><label for="qlw-facts">Dữ liệu đã xác minh (brief)</label>
         <textarea id="qlw-facts" class="qlw-input" rows="6" maxlength="16000" placeholder="Dán thông tin thật: tên thương hiệu, địa chỉ, giá, chính sách, ý chính cần nói. Qwen chỉ được dùng số liệu có ở đây."></textarea>
         <small id="qlw-facts-count">0/16.000 ký tự (6.000 ký tự đầu được đưa vào prompt)</small></p>
+      <?php if ($config['verifiedFacts'] !== '') : ?>
+        <p><button type="button" class="button button-small" id="qlw-insert-facts">Chèn dữ kiện đã xác minh của cửa hàng</button>
+          <small class="qlw-muted">Chỉ chèn khi bài cần thông tin cửa hàng (giá, địa chỉ…); không nhồi vào mọi bài.</small></p>
+      <?php endif; ?>
     </section>
 
     <section class="qlw-card qlw-wide" aria-labelledby="qlw-step-write">
@@ -86,12 +91,12 @@ $qlw_is_admin = current_user_can('manage_options');
     <section class="qlw-card qlw-wide" aria-labelledby="qlw-step-save">
       <h2 id="qlw-step-save"><span class="qlw-step">4</span> Kiểm tra & lưu nháp</h2>
       <p class="qlw-actions">
-        <button type="button" class="button" id="qlw-qa">Chấm QA kỹ thuật</button>
+        <button type="button" class="button" id="qlw-qa">Chấm QA (kỹ thuật, dữ kiện, SEO)</button>
         <button type="button" class="button button-primary" id="qlw-save">Lưu bản nháp (không xuất bản)</button>
         <button type="button" class="button-link" id="qlw-new" hidden>Bắt đầu bài mới</button>
       </p>
       <div id="qlw-result" class="qlw-result" role="status" aria-live="polite"></div>
-      <p class="qlw-muted">QA 70/100 là <strong>điểm kỹ thuật nội bộ</strong> (độ dài, H2, lặp, ngôn ngữ, chữ Hán lẫn vào, chi tiết ngoài brief, mã nguy hiểm). Điểm này không chứng nhận nội dung chính xác hay bảo đảm SEO. Bài chưa đạt vẫn lưu nháp với nhãn cần sửa.</p>
+      <p class="qlw-muted">QA gồm 4 phần: <strong>Kỹ thuật</strong> (độ dài, H2, lặp, ngôn ngữ, mã nguy hiểm), <strong>Kiểm chứng dữ kiện</strong> (giá/số/năm ngoài brief, giá lệch brief, xe xăng bị gọi là xe điện, địa lý Hà Nội, lẫn mua/thuê, đánh giá hoặc nguồn tự bịa), <strong>SEO</strong> (từ khóa, tiêu đề, H2, trùng bài đã có) và <strong>Biên tập</strong> do con người xác nhận trong trình soạn bài. Ngưỡng 70/100 chỉ là điểm nội bộ: không chứng nhận nội dung đúng và không bảo đảm thứ hạng. Bài chưa đạt vẫn lưu nháp với nhãn cần sửa.</p>
     </section>
 
     <?php if ($qlw_is_admin) : ?>
@@ -112,6 +117,9 @@ $qlw_is_admin = current_user_can('manage_options');
           </ul>
           <p class="qlw-muted">Cần ít nhất config.json, generation_config.json, tokenizer.json, tokenizer_config.json và model_q4f16.onnx (WebGPU) hoặc model_q4.onnx (WASM), lấy đúng revision <code><?php echo esc_html(\QLW\Plugin::MODEL_REVISION); ?></code>.</p>
         </fieldset>
+        <p><label for="qlw-verified-facts"><strong>Dữ kiện đã xác minh của cửa hàng</strong> (tên, địa chỉ, điện thoại, giá, chính sách)</label><br>
+          <textarea id="qlw-verified-facts" name="verified_facts" rows="8" class="large-text" maxlength="16000"><?php echo esc_textarea($settings['verified_facts']); ?></textarea>
+          <span class="qlw-muted">Người viết bấm "Chèn dữ kiện đã xác minh" để đưa vào brief khi cần. QA đối chiếu giá/số điện thoại/địa chỉ trong bài với brief này. Chỉ ghi thông tin đã kiểm tra; cập nhật khi giá thay đổi.</span></p>
         <p><label><input type="checkbox" name="isolation" value="1" <?php checked($settings['isolation'], 1); ?>> Bật cross-origin isolation cho trang này (WASM đa luồng nhanh hơn). Tắt nếu plugin khác trên trang này bị lỗi hiển thị.</label></p>
         <?php submit_button('Lưu cài đặt', 'secondary', 'submit', false); ?>
       </form>
