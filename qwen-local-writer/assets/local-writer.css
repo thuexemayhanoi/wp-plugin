@@ -1,0 +1,55 @@
+/* Qwen Local Writer admin screen. Mobile first; scoped to .qlw. */
+.qlw { max-width: 1200px; }
+.qlw-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.qlw-badge { font-size: 12px; font-weight: 600; line-height: 1; padding: 4px 8px; border-radius: 999px; background: #f0f6fc; color: #0a4b78; border: 1px solid #c5d9ed; }
+.qlw-lead { font-size: 14px; max-width: 70ch; }
+.qlw-warning p { max-width: 90ch; }
+.qlw-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+.qlw-card { background: #fff; border: 1px solid #dcdcde; border-radius: 8px; padding: 16px; min-width: 0; }
+.qlw-card h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 16px; }
+.qlw-step { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #2271b1; color: #fff; font-size: 13px; flex: none; }
+.qlw label { display: block; font-weight: 600; margin-bottom: 4px; }
+.qlw .qlw-settings label { font-weight: 400; display: inline; }
+.qlw-input, .qlw select, .qlw-editor { width: 100%; max-width: 100%; box-sizing: border-box; }
+.qlw-input, .qlw select { min-height: 40px; font-size: 16px; } /* 16px avoids iOS zoom on focus */
+.qlw-editor { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; line-height: 1.55; min-height: 360px; resize: vertical; }
+.qlw-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 16px; }
+.qlw-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.qlw-actions .button { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; }
+.qlw-progress[hidden] { display: none; }
+.qlw-progress { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+.qlw-progress progress { flex: 1; height: 14px; min-width: 0; accent-color: #2271b1; }
+.qlw-progress span { font-variant-numeric: tabular-nums; font-size: 12px; white-space: nowrap; }
+.qlw-status { padding: 8px 12px; border-left: 4px solid #c3c4c7; background: #f6f7f7; margin: 8px 0; }
+.qlw-status[data-tone="ok"], .qlw-result[data-tone="ok"] { border-left-color: #00a32a; }
+.qlw-status[data-tone="error"], .qlw-result[data-tone="error"] { border-left-color: #d63638; background: #fcf0f1; }
+.qlw-status[data-tone="info"], .qlw-result[data-tone="info"] { border-left-color: #2271b1; }
+.qlw-result:not(:empty) { padding: 8px 12px; border-left: 4px solid #c3c4c7; background: #f6f7f7; margin: 8px 0; }
+.qlw-env { margin: 0 0 12px; }
+.qlw-env li { margin: 4px 0; display: flex; gap: 6px; align-items: flex-start; }
+.qlw-env .dashicons, .qlw-files .dashicons { flex: none; color: #00a32a; }
+.qlw-env li[data-ok="no"] .dashicons { color: #dba617; }
+.qlw-env li[data-ok="no"] { color: #8a2424; }
+.qlw-muted { color: #50575e; font-size: 13px; }
+.qlw-qa-score { font-weight: 600; }
+.qlw-qa-score[data-pass="yes"] { color: #00691b; }
+.qlw-qa-score[data-pass="no"] { color: #8a2424; }
+.qlw-checks { margin: 4px 0 8px 1em; }
+.qlw-checks li[data-pass="no"] { color: #8a2424; }
+.qlw-files { columns: 2 220px; margin: 4px 0 8px; }
+.qlw-settings summary { cursor: pointer; font-weight: 600; }
+.qlw-settings fieldset { margin: 12px 0; }
+.qlw-settings legend { font-weight: 600; margin-bottom: 4px; }
+
+@media (max-width: 782px) {
+  .qlw-actions .button { flex: 1 1 100%; }
+  .qlw-card { padding: 12px; }
+  .qlw-editor { min-height: 300px; }
+}
+@media (min-width: 783px) {
+  .qlw-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1100px) {
+  .qlw-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); }
+  .qlw-wide { grid-column: 1 / -1; }
+}

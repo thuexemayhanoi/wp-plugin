@@ -1,0 +1,158 @@
+// node --test qwen-local-writer/tests/js — offline tests, no model download.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  countWords, parseOutline, cleanPart, writeArticle, articlePlan, tokenBudget, normalizeInput,
+  outlineMessages, sectionMessages, systemPrompt, classifyError, explainError, foreignScriptRatio, MODEL,
+} from '../../assets/qlw-core.js';
+
+const input = normalizeInput({ title: 'Kinh nghiệm thuê xe máy ở Hà Nội', keyword: 'thuê xe máy', facts: 'Honda Vision 200.000đ/ngày', language: 'vi' });
+
+test('model is pinned to an exact Hugging Face commit', () => {
+  assert.equal(MODEL.id, 'onnx-community/Qwen3-0.6B-ONNX');
+  assert.match(MODEL.revision, /^[0-9a-f]{40}$/);
+});
+
+test('counts Vietnamese words with diacritics', () => {
+  assert.equal(countWords('Thuê xe máy ở Hà Nội, đặt cọc 2–3 triệu.'), 11);
+  assert.equal(countWords("It's a rider's check-list."), 4);
+});
+
+test('plan adds up to the target and token budget is bounded', () => {
+  const p = articlePlan(1500, 7);
+  assert.ok(Math.abs(p.intro + p.conclusion + p.section * 7 - 1500) <= 7);
+  assert.ok(tokenBudget(200, 'vi') > 200 && tokenBudget(200, 'vi') < 500);
+  assert.equal(tokenBudget(10000, 'en'), 900);
+});
+
+test('normalizeInput validates title, language and strips control characters', () => {
+  assert.throws(() => normalizeInput({ title: 'abc' }), /tối thiểu 5/);
+  const v = normalizeInput({ title: '  Tiêu\u0000 đề   hợp lệ ', language: 'xx' });
+  assert.equal(v.title, 'Tiêu đề hợp lệ');
+  assert.equal(v.language, 'vi');
+  assert.equal(normalizeInput({ title: 'Valid title', language: 'en' }).language, 'en');
+});
+
+test('prompts carry the brief as data and forbid invented specifics', () => {
+  const sys = systemPrompt('vi');
+  assert.match(sys, /không nêu con số cụ thể/);
+  assert.match(systemPrompt('en'), /do not state a specific number/);
+  const msg = sectionMessages(input, ['A b c d', 'E f g h'], 1, 180);
+  assert.equal(msg[0].role, 'system');
+  assert.match(msg[1].content, /DỮ LIỆU ĐÃ XÁC MINH:\n"""\nHonda Vision 200\.000đ\/ngày\n"""/);
+  assert.match(msg[1].content, /"E f g h" khoảng 180 từ/);
+  assert.match(outlineMessages({ ...input, language: 'en' })[1].content, /exactly 7 section titles/);
+});
+
+test('parseOutline removes numbering, preambles, title echoes, duplicates and Chinese', () => {
+  const raw = `<think>\n\n</think>\nDưới đây là 7 tiêu đề:\n1. **Chọn loại xe phù hợp nhu cầu**\n2) Giấy tờ cần chuẩn bị khi thuê xe\n- Giấy tờ cần chuẩn bị khi thuê xe\n## Kinh nghiệm thuê xe máy ở Hà Nội\n3. 选择合适的摩托车类型\n4. Kết luận\nH2: Kiểm tra xe kỹ khi nhận bàn giao:\nPhần 5: Lái xe an toàn trong nội thành.`;
+  assert.deepEqual(parseOutline(raw, input), [
+    'Chọn loại xe phù hợp nhu cầu',
+    'Giấy tờ cần chuẩn bị khi thuê xe',
+    'Kiểm tra xe kỹ khi nhận bàn giao',
+    'Lái xe an toàn trong nội thành',
+  ]);
+});
+
+test('cleanPart strips think blocks, preambles, restated headings, H1/H2, HTML and cut-off fragments', () => {
+  const raw = '<think>plan</think>Dưới đây là đoạn văn cho phần này:\n## Giấy tờ cần chuẩn bị\n# Tiêu đề lạc\nCâu đầu tiên đầy đủ ý nghĩa. <b>Câu thứ hai</b> cũng đầy đủ.\n• mục một\nCâu cuối bị cắt giữa chừng vì hết tok';
+  const out = cleanPart(raw, { heading: 'Giấy tờ cần chuẩn bị' });
+  assert.ok(!/think|Dưới đây|<b>/.test(out.text), out.text);
+  assert.match(out.text, /^### Tiêu đề lạc/m);
+  assert.ok(!/^## /m.test(out.text));
+  assert.match(out.text, /^- mục một/m);
+  assert.ok(out.text.endsWith('đầy đủ.') || out.text.endsWith('mục một'), out.text);
+  const intro = cleanPart('## Mở đầu\nĐoạn văn.', { allowSubheadings: false });
+  assert.ok(!intro.text.includes('#'));
+});
+
+test('cleanPart flags and removes Chinese drift', () => {
+  const out = cleanPart('Câu tiếng Việt bình thường và đầy đủ ý.\n这是中文。\nMột câu khác có 这 chữ lạ ở giữa nhưng vẫn đủ dài.');
+  assert.ok(out.warnings.includes('foreign-script'));
+  assert.equal(foreignScriptRatio(out.text), 0);
+  assert.match(out.text, /Một câu khác có chữ lạ/);
+});
+
+function fakeGenerator({ wordsPerCall = null, outline, failAt = -1, stopAt = -1, state = {} } = {}) {
+  let calls = 0;
+  return async (messages, params) => {
+    calls++;
+    state.calls = calls;
+    state.params = params;
+    if (calls === failAt) throw new Error('memory access out of bounds');
+    const prompt = messages.at(-1).content;
+    if (/Lập dàn ý|Create an outline/.test(prompt)) {
+      return { text: outline ?? '1. Chọn loại xe phù hợp\n2. Giấy tờ cần chuẩn bị\n3. Đặt cọc và hợp đồng\n4. Kiểm tra xe khi nhận\n5. Lái xe an toàn nội thành\n6. Gửi xe và đổ xăng\n7. Trả xe đúng hẹn', tokens: 60 };
+    }
+    const want = wordsPerCall ?? Number(prompt.match(/khoảng (\d+)/)?.[1] || 100);
+    const sentences = [];
+    for (let i = 0; countWords(sentences.join(' ')) < want; i++) sentences.push(`Lần gọi ${calls} câu ${i} nói về một lưu ý khác nhau cho người thuê xe.`);
+    return { text: sentences.join(' '), tokens: want, interrupted: calls === stopAt };
+  };
+}
+
+test('writeArticle produces ~1,500 words with 7 H2 sections and a conclusion', async () => {
+  const events = [];
+  const out = await writeArticle({ input, generate: fakeGenerator(), onProgress: e => events.push(e.phase) });
+  assert.equal(out.headings.length, 7);
+  assert.equal((out.markdown.match(/^## /gm) || []).length, 8);
+  assert.match(out.markdown, /^## Kết luận$/m);
+  assert.ok(!/^# /m.test(out.markdown));
+  assert.ok(out.words >= 1350 && out.words <= 1800, String(out.words));
+  assert.equal(out.stopped, false);
+  assert.deepEqual([...new Set(events)], ['outline', 'intro', 'section', 'conclusion', 'done']);
+});
+
+test('writeArticle tops up short sections and retries weak outputs', async () => {
+  const state = {};
+  const out = await writeArticle({ input, generate: fakeGenerator({ wordsPerCall: 60, state }) });
+  assert.ok(out.stats.retries > 0 && out.stats.continuations > 0);
+  assert.ok(out.words > 700, String(out.words));
+});
+
+test('writeArticle stops immediately and keeps partial text', async () => {
+  let stop = false;
+  const out = await writeArticle({
+    input,
+    generate: fakeGenerator({ stopAt: 4 }),
+    onProgress: e => { if (e.phase === 'section' && e.index === 3) stop = true; },
+    shouldStop: () => stop,
+  });
+  assert.equal(out.stopped, true);
+  assert.ok(out.headings.length >= 2 && out.headings.length < 7);
+  assert.ok(!out.markdown.includes('## Kết luận'));
+});
+
+test('writeArticle surfaces runtime errors with the partial draft', async () => {
+  await assert.rejects(
+    writeArticle({ input, generate: fakeGenerator({ failAt: 4 }) }),
+    error => error.message.includes('memory access') && error.partialMarkdown.includes('## Chọn loại xe phù hợp'),
+  );
+});
+
+test('writeArticle fails honestly when the outline is unusable', async () => {
+  await assert.rejects(writeArticle({ input, generate: fakeGenerator({ outline: 'ok\nno' }) }), /5 tiêu đề H2/);
+});
+
+test('English articles use an English conclusion heading', async () => {
+  const en = normalizeInput({ title: 'Renting a motorbike in Hanoi', language: 'en' });
+  const generate = async (messages) => {
+    const p = messages.at(-1).content;
+    if (/Create an outline/.test(p)) return { text: 'Choosing the right bike\nDocuments to prepare\nDeposits and contracts\nInspecting the bike\nRiding safely downtown' };
+    const want = Number(p.match(/about (\d+)/)?.[1] || 100);
+    return { text: Array.from({ length: Math.ceil(want / 10) }, (_, i) => `Sentence ${i} gives a distinct and useful riding tip.`).join(' ') };
+  };
+  const out = await writeArticle({ input: en, generate });
+  assert.match(out.markdown, /^## Conclusion$/m);
+  assert.equal(out.headings.length, 5);
+});
+
+test('errors are classified for accurate messages', () => {
+  assert.equal(classifyError('RangeError: WebAssembly.Memory(): could not allocate memory'), 'OUT_OF_MEMORY');
+  assert.equal(classifyError('TypeError: Failed to fetch'), 'NETWORK');
+  assert.equal(classifyError('Could not locate file: "https://x/onnx/model_q4.onnx".'), 'MODEL_FILES');
+  assert.equal(classifyError('QuotaExceededError: Quota exceeded.'), 'STORAGE');
+  assert.equal(classifyError('GPUDevice was lost'), 'DEVICE_LOST');
+  assert.match(explainError(Object.assign(new Error('x'), { code: 'NO_WEBGPU' })), /WASM/);
+  assert.match(explainError(new Error('Failed to fetch'), 'en'), /Network error/);
+});

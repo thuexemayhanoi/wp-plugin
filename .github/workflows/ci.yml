@@ -23,13 +23,24 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: mbstring, dom, openssl, zip, simplexml
           tools: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: PHP syntax
         run: find . -type f -name '*.php' -print0 | xargs -0 -n1 php -l
-      - name: Qwen offline beta technical QA and JavaScript syntax
+      - name: Qwen Local Writer — offline unit tests (no model, no API)
         run: |
           php qwen-local-writer/tests/quality.php
-          node --check qwen-local-writer/assets/qwen-worker.js
-          node --check qwen-local-writer/assets/local-writer.js
+          php qwen-local-writer/tests/markdown.php
+          for f in qwen-local-writer/assets/*.js qwen-local-writer/tests/js/*.mjs qwen-local-writer/tests/e2e/*.cjs qwen-local-writer/tests/e2e/*.mjs; do node --check "$f"; done
+          node --test qwen-local-writer/tests/js/*.test.mjs
+      - name: Qwen Local Writer — fetch vendored runtime from npm and verify against manifest
+        run: |
+          python3 scripts/vendor_qwen_deps.py
+          python3 scripts/vendor_qwen_deps.py --check
+          python3 scripts/vendor_qwen_deps.py --verify-upstream
+      - name: Qwen Local Writer — build and validate ZIP
+        run: |
           python3 scripts/build_qwen.py
           python3 -m zipfile -t dist/qwen-local-writer.zip
       - name: Quick flow smoke tests (mocks; no paid API calls)
@@ -66,6 +77,84 @@ jobs:
           path: dist/qwen-local-writer.zip
           if-no-files-found: error
           retention-days: 30
+
+  qwen-wordpress:
+    name: Qwen ZIP on clean WordPress ${{ matrix.wp }} / PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { wp: '6.9.10', php: '8.1' }
+          - { wp: '7.1.3', php: '8.3' }
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports: ['3306:3306']
+        options: --health-cmd="mysqladmin ping -proot" --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      WP_PATH: /tmp/wordpress
+      WP_URL: http://localhost:8881
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, mysqli, zip
+          tools: wp-cli
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build Qwen ZIP
+        run: python3 scripts/build_qwen.py
+      - name: Install clean WordPress ${{ matrix.wp }}
+        run: |
+          wp core download --version=${{ matrix.wp }} --path=$WP_PATH
+          wp config create --path=$WP_PATH --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1 --skip-check
+          wp config set WP_DEBUG true --raw --path=$WP_PATH
+          wp config set WP_DEBUG_LOG true --raw --path=$WP_PATH
+          wp config set WP_DEBUG_DISPLAY false --raw --path=$WP_PATH
+          wp core install --path=$WP_PATH --url=$WP_URL --title="QLW CI" --admin_user=admin --admin_password=admin-pass-123 --admin_email=admin@example.com --skip-email
+          wp user create contrib1 contrib1@example.com --role=contributor --user_pass=contrib-pass-123 --path=$WP_PATH
+          wp user create sub1 sub1@example.com --role=subscriber --user_pass=sub-pass-123 --path=$WP_PATH
+      - name: Install and activate the ZIP
+        run: |
+          wp plugin install dist/qwen-local-writer.zip --activate --path=$WP_PATH
+          wp plugin list --path=$WP_PATH
+      - name: WordPress integration tests (real WP functions, roles, nonces, drafts)
+        run: wp eval-file qwen-local-writer/tests/wp-integration.php --path=$WP_PATH
+      - name: Browser E2E of admin screen (Chromium, fake model — plumbing only)
+        run: |
+          npm i --no-save --no-audit --no-fund playwright@1.56.1
+          npx playwright install --with-deps chromium
+          (cd $WP_PATH && PHP_CLI_SERVER_WORKERS=4 php -S localhost:8881 > /tmp/php-server.log 2>&1 &)
+          sleep 2
+          WP_CLI="wp --path=$WP_PATH" E2E_OUT=dist/e2e node qwen-local-writer/tests/e2e/admin-ui.e2e.cjs
+      - name: Uninstall keeps posts and removes only settings
+        run: |
+          before=$(wp post list --post_type=post --post_status=any --meta_key=_qlw_markdown --format=count --path=$WP_PATH)
+          wp plugin deactivate qwen-local-writer --path=$WP_PATH
+          wp plugin uninstall qwen-local-writer --path=$WP_PATH
+          after=$(wp post list --post_type=post --post_status=any --meta_key=_qlw_markdown --format=count --path=$WP_PATH)
+          echo "Qwen drafts before=$before after=$after"
+          test "$before" -gt 0 && test "$before" = "$after"
+          ! wp option get qlw_settings --path=$WP_PATH
+      - name: PHP notices from the run
+        if: always()
+        run: |
+          if [ -f $WP_PATH/wp-content/debug.log ]; then grep -i "qwen-local-writer" $WP_PATH/wp-content/debug.log && exit 1 || echo "No PHP notices from qwen-local-writer"; fi
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qwen-e2e-screens-wp${{ matrix.wp }}
+          path: dist/e2e
+          if-no-files-found: ignore
+          retention-days: 14
 
   github-release:
     name: Publish tagged WordPress ZIP
