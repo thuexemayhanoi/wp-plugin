@@ -40,7 +40,8 @@ async function login(page, user, pass) {
   await page.goto(`${BASE}/wp-login.php`);
   await page.fill('#user_login', user);
   await page.fill('#user_pass', pass);
-  await Promise.all([page.waitForURL(/wp-admin/), page.click('#wp-submit')]);
+  // Any page after wp-login.php: WooCommerce sends users without edit_posts to "My account", not wp-admin.
+  await Promise.all([page.waitForURL(url => !url.pathname.endsWith('/wp-login.php')), page.click('#wp-submit')]);
 }
 
 async function openWriter(page) {
@@ -344,7 +345,9 @@ async function fillInput(page, title) {
     const page = await context.newPage();
     await login(page, 'sub1', 'sub-pass-123');
     const response = await page.goto(`${BASE}/wp-admin/admin.php?page=qlw-local`);
-    check(response.status() === 403 || /not allowed|không có quyền|Sorry/i.test(await page.content()), 'subscriber cannot open the writer');
+    const denied = response.status() === 403 || /not allowed|không có quyền|Sorry/i.test(await page.content())
+      || !page.url().includes('page=qlw-local'); // WooCommerce redirects subscribers out of wp-admin
+    check(denied && await page.locator('#qlw-app').count() === 0, 'subscriber cannot open the writer (' + page.url() + ')');
     const ajax = await page.evaluate(async base => {
       const r = await fetch(base + '/wp-admin/admin-ajax.php', { method: 'POST', body: new URLSearchParams({ action: 'qlw_save_draft', title: 'Hack attempt title', markdown: 'x'.repeat(200) }) });
       return { status: r.status, body: await r.text() };
