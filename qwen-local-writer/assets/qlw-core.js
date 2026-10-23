@@ -159,6 +159,16 @@ export function stripThinking(text) {
 const OUTLINE_NOISE = /^(?:dàn ý|outline|tiêu đề|các tiêu đề|section titles?|here (?:are|is)|dưới đây|sau đây|h2)(?![\p{L}\p{N}])/iu;
 const OUTLINE_SKIP = /^(?:mở bài|mở đầu|giới thiệu|introduction|kết luận|tổng kết|lời kết|conclusion|summary|faq)$/iu;
 
+/** Word-set similarity of two titles (Jaccard, 0–1). */
+function overlap(a, b) {
+  const words = value => new Set(value.toLowerCase().match(/[\p{L}\p{N}]+/gu) || []);
+  const x = words(a), y = words(b);
+  if (!x.size || !y.size) return 0;
+  let shared = 0;
+  for (const w of x) if (y.has(w)) shared++;
+  return shared / (x.size + y.size - shared);
+}
+
 /** Turn raw model output into clean, unique H2 titles. */
 export function parseOutline(text, input, max = SECTION_COUNT) {
   const seen = new Set([input.title.toLowerCase()]);
@@ -176,7 +186,7 @@ export function parseOutline(text, input, max = SECTION_COUNT) {
     if (foreignScriptRatio(line) > 0) continue;
     if (countWords(line) < 2 || countWords(line) > 18) continue;
     const key = line.toLowerCase();
-    if (seen.has(key)) continue;
+    if (seen.has(key) || [...seen].some(other => overlap(key, other) >= 0.75)) continue;
     seen.add(key);
     headings.push(line);
     if (headings.length >= max) break;
@@ -193,7 +203,10 @@ export function stripMarkers(line) {
     value = value
       .replace(/^\s*(?:#{1,6}|[-*+•>]|\(?\d{1,2}[.):]|\(?[ivx]{1,4}[.)])\s*/iu, '')
       .replace(/^\s*(?:h[1-6]|tiêu đề|heading|title)\s*[:.-]\s*/iu, '')
-      .replace(/^\s*(?:phần|mục|section|part)\s+\d+\s*[:.-]\s*/iu, '');
+      .replace(/^\s*(?:phần|mục|section|part)\s+\d+\s*[:.-]\s*/iu, '')
+      .replace(/^\s*\d+(?:st|nd|rd|th)\s+(?:section|part|point)\s*[:.-]\s*/iu, '')
+      .replace(/^\s*(?:phần|mục)\s+thứ\s+\p{L}+\s*[:.-]\s*/iu, '')
+      .replace(/^\s*(?:ghi chú|lưu ý|note)\s*[:：]\s*(?=\p{L})/iu, '');
   } while (value !== previous);
   return value.replace(/[*_]+$/g, '').trim();
 }
@@ -214,6 +227,9 @@ const META_LINE_RE = new RegExp([
   String.raw`^(?:here is|here's|below is|sure[,!])${WE}`,
   String.raw`^(?:word count|note)\s*[:：]`,
 ].join('|'), 'iu');
+
+// Assistant-style sentences that do not belong in an article.
+const CHATBOT_RE = /[^.!?\n]*(?:let me know|feel free to (?:ask|reach out)|i hope this helps|hope this helps|i can share|as an ai|hãy cho (?:tôi|mình) biết|nếu bạn có (?:bất kỳ )?câu hỏi(?:[^.!?\n]{0,40})?(?:hỏi|liên hệ) (?:tôi|mình)|tôi (?:rất )?sẵn lòng (?:giúp|hỗ trợ)|tôi có thể giúp)[^.!?\n]*[.!?]?/giu;
 
 /**
  * Clean one generated part.
@@ -259,6 +275,8 @@ export function cleanPart(text, { heading = '', others = [], allowSubheadings = 
     out.push(line);
   }
   let value = out.join('\n')
+    .replace(CHATBOT_RE, () => { warnings.push('chatbot'); return ''; })
+    .replace(/[ \t]{2,}/g, ' ')
     .replace(/^\s*["“]([^"”\n]{40,})["”]\s*$/gmu, '$1')
     .replace(/\n{3,}/g, '\n\n')
     .replace(/(?:\n|^)### [^\n]*\s*$/u, '')

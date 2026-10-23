@@ -13,7 +13,8 @@ permissions:
   contents: read
 concurrency:
   group: qwen-real-${{ github.ref }}
-  cancel-in-progress: true
+  # Real-model runs are long and are the evidence for releases: queue new ones, never cancel a running one.
+  cancel-in-progress: false
 jobs:
   node-cpu:
     name: Real Qwen3 on CPU (onnxruntime-node) — 4 articles VI/EN, q4f16 + q4

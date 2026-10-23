@@ -120,6 +120,19 @@ function fakeGenerator({ wordsPerCall = null, outline, failAt = -1, stopAt = -1,
   };
 }
 
+test('real Qwen3-0.6B artefacts, run 39898298326: "7th Section:" headings, chatbot closers, H2 repeating the title', () => {
+  const en = normalizeInput({ title: 'Riding a Scooter Safely in Hanoi Traffic', language: 'en' });
+  assert.deepEqual(parseOutline('## 7th Section: How to Choose the Right Bike\n6th Section: What a 50cc Scooter Is For\nRiding a scooter safely in Hanoi traffic today', en), [
+    'How to Choose the Right Bike', 'What a 50cc Scooter Is For',
+  ]);
+  const vi = normalizeInput({ title: 'Cách bảo quản xe tay ga trong mùa mưa ở Hà Nội' });
+  assert.deepEqual(parseOutline('Cách bảo quản xe tay ga trong mùa mưa tại Hà Nội\nKiểm tra phanh và lốp sau mưa\nKiểm tra phanh và lốp xe sau khi mưa', vi), ['Kiểm tra phanh và lốp sau mưa']);
+  const closing = cleanPart('Remember, safety is the priority. If you have any questions, feel free to ask. Let me know if there are other tips I can share.');
+  assert.equal(closing.text, 'Remember, safety is the priority.');
+  assert.ok(closing.warnings.includes('chatbot'));
+  assert.equal(cleanPart('Hãy kiểm tra xe thường xuyên. Nếu bạn có câu hỏi, hãy hỏi tôi nhé.').text, 'Hãy kiểm tra xe thường xuyên.');
+});
+
 test('writeArticle produces ~1,500 words with 7 H2 sections and a conclusion', async () => {
   const events = [];
   const out = await writeArticle({ input, generate: fakeGenerator(), onProgress: e => events.push(e.phase) });

@@ -83,7 +83,7 @@ final class Quality {
 
         // Model artifacts in headings, repeated headings, and sections bleeding into each other.
         preg_match_all('/^(#{2,3})\s+(.+)$/mu', $markdown, $hm);
-        $bad_headings = array_filter($hm[2], static fn (string $h): bool => (bool) preg_match('/\*|_{2}|\bH[1-6]\s*[:.-]|[:：]\s*$/u', $h));
+        $bad_headings = array_filter($hm[2], static fn (string $h): bool => (bool) preg_match('/\*|_{2}|\bH[1-6]\s*[:.-]|[:：]\s*$|^\d+(?:st|nd|rd|th)\s+(?:section|part)\b|^(?:phần|mục)\s+(?:thứ\s+)?\S+\s*[:：]/iu', $h));
         $check('heading-format', !$bad_headings, 10, $bad_headings ? 'Tiêu đề còn ký tự rác của model (*, "H2:", dấu hai chấm cuối): ' . implode(' | ', array_slice($bad_headings, 0, 3)) : 'Tiêu đề sạch.');
         $heading_keys = array_map([self::class, 'key'], $hm[2]);
         $dup_headings = count($heading_keys) - count(array_unique($heading_keys));
@@ -121,7 +121,7 @@ final class Quality {
 
         // 3. Safety and leftovers.
         $check('safe', !self::is_unsafe($markdown), 70, 'Không có HTML/mã nguy hiểm.');
-        $check('placeholder', !preg_match('/\b(?:TODO|TBD|lorem ipsum|as an ai(?: language model)?|tôi là (?:một )?(?:mô hình|trợ lý) (?:ngôn ngữ|ai))\b|\[(?:điền|insert|placeholder|tên)[^\]]{0,40}\]|<\/?think>/iu', $markdown), 25, 'Không có placeholder, câu trả lời khuôn mẫu hoặc thẻ <think>.');
+        $check('placeholder', !preg_match('/\b(?:TODO|TBD|lorem ipsum|as an ai(?: language model)?|let me know if|feel free to ask|i hope this helps|tôi là (?:một )?(?:mô hình|trợ lý) (?:ngôn ngữ|ai))\b|\[(?:điền|insert|placeholder|tên)[^\]]{0,40}\]|<\/?think>/iu', $markdown), 25, 'Không có placeholder, câu trả lời khuôn mẫu hoặc thẻ <think>.');
 
         // 4. Repetition: identical long paragraphs and repeated sentences.
         $seen = [];
