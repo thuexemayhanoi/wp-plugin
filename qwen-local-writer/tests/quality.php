@@ -183,4 +183,19 @@ check(!in_array('price-mismatch', $failed_ids($plural), true), 'amounts after "d
 $zeros = Quality::assess(vi_article(8, 7, 'Tôi chọn Honda Wave 150, giá là 000000000đ/ngày.'), 1500, 'vi', $nguyen_tu, '', $rental);
 check(in_array('000000000đ', $zeros['unverified'], true) && in_array('price-mismatch', $failed_ids($zeros), true), 'a garbage "000000000đ" price is flagged');
 
+// Run 39914553591 (browser): the amount comes before the model it belongs to; "mình" as "themselves".
+$before = Quality::assess(vi_article(8, 7, 'Giá tham khảo cho các loại xe là: 200.000 đồng/ngày cho xe Honda Vision, và 150.000 đồng/ngày cho xe Honda Wave.'), 1500, 'vi', $nguyen_tu, '', $rental);
+check(!in_array('price-mismatch', $failed_ids($before), true), '"200.000 đồng/ngày cho xe Honda Vision, và 150.000 đồng/ngày cho xe Honda Wave" is correct');
+$before_swap = Quality::assess(vi_article(8, 7, 'Giá tham khảo: 150.000 đồng/ngày cho xe Honda Vision, và 200.000 đồng/ngày cho xe Honda Wave.'), 1500, 'vi', $nguyen_tu, '', $rental);
+check(in_array('price-mismatch', $failed_ids($before_swap), true), 'swapped prices written before the model are still caught');
+$en_before = Quality::assess(en_article() . "\n\nExpect 200,000 VND/day for the Honda Vision and 150,000 VND/day for the Honda Wave.", 1500, 'en', $nguyen_tu, '', $rental);
+check(!in_array('price-mismatch', $failed_ids($en_before), true), '"200,000 VND/day for the Honda Vision" binds to the following model');
+$deposit_before = Quality::assess(vi_article(8, 7, 'Tiền cọc 2.000.000 đồng cho xe Honda Wave.'), 1500, 'vi', $nguyen_tu, '', $rental);
+check(!in_array('price-mismatch', $failed_ids($deposit_before), true), 'a deposit written before the model is not a model-price mismatch');
+$reflexive = Quality::assess(vi_article(8, 7, 'Các cửa hàng và đại lý chuyên môn nên đảm bảo rằng mình đã cập nhật đầy đủ các thông tin về giá cả.'), 1500, 'vi');
+check(!in_array('experience', $failed_ids($reflexive), true), 'reflexive "rằng mình đã cập nhật" is not a first-person experience');
+foreach (['Mình đã thuê xe ở đây ba lần.', 'Hôm qua mình đã thử chiếc Vision này.'] as $line) {
+    check(in_array('experience', $failed_ids(Quality::assess(vi_article(8, 7, $line), 1500, 'vi')), true), 'first-person experience still flagged: ' . $line);
+}
+
 finish('Quality');

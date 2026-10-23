@@ -57,10 +57,11 @@
 | 10 | QA mới báo nhầm: câu phủ định đúng ("không phải mua xe mà là thuê") bị tính là lẫn mua/thuê; "deposits" số nhiều không được nhận là tiền cọc | lần chạy thật 9 (bài VI QA 40) | trung bình |
 | 11 | Model in giá rác "000000000đ/ngày" | lần chạy thật 9 | thấp |
 | 12 | Kiểm tra trùng nội dung bỏ sót bản sao khi site có nhiều bài cùng từ khóa (chỉ tìm theo từ khóa/tiêu đề) | kiểm thử tích hợp lặp lại trên CSDL >100 bài | trung bình |
+| 13 | QA báo nhầm: giá viết trước tên xe ("200.000 đồng/ngày cho xe Honda Vision, và 150.000 đồng/ngày cho xe Honda Wave") bị gắn vào xe đứng trước; "rằng mình đã cập nhật" ("mình" = chính họ) bị coi là kể trải nghiệm | lần chạy thật 9, bài trình duyệt (QA 60) | trung bình |
 
 ## 4. Lỗi đã sửa
-Đã sửa lỗi 1–8, 10, 11 (câu có số toàn 0 bị bỏ khi làm sạch, QA vẫn đánh dấu) và 12 (tìm thêm theo 2 cụm câu nguyên văn), mỗi lỗi có kiểm thử hồi quy:
-- `tests/quality.php` (60 kiểm tra);
+Đã sửa lỗi 1–8, 10, 11 (câu có số toàn 0 bị bỏ khi làm sạch, QA vẫn đánh dấu), 12 (tìm thêm theo 2 cụm câu nguyên văn) và 13 (giá gắn với tên xe ngay sau "cho/for"; "mình đã" chỉ tính khi mở đầu câu hoặc đi với động từ trải nghiệm), mỗi lỗi có kiểm thử hồi quy:
+- `tests/quality.php` (67 kiểm tra);
 - `tests/js/core.test.mjs` (29);
 - `tests/wp-integration.php` (66);
 - `tests/e2e/admin-ui.e2e.cjs` (59);
@@ -73,7 +74,7 @@ Lỗi 9 thuộc plugin cũ, chỉ được ghi vào tài liệu.
 | Bộ kiểm thử | Kết quả |
 |---|---|
 | `php -l` mọi file PHP của repo | PASS |
-| `php qwen-local-writer/tests/quality.php` | 60/60 PASS |
+| `php qwen-local-writer/tests/quality.php` | 67/67 PASS |
 | `php qwen-local-writer/tests/markdown.php` | 18/18 PASS |
 | `node --test qwen-local-writer/tests/js/*.test.mjs` | 29/29 PASS |
 | `node --check` mọi JS của plugin + `assets/admin.js` | PASS |
@@ -92,7 +93,7 @@ Kiểm thử trên GitHub Actions (chi tiết ở mục 8):
 | CI `97af80d` (run 39914553616): PHP 8.1/8.3 lint + unit + build; WP 6.9.10/PHP 8.1; WP 7.1.3/PHP 8.3 | PASS |
 | CI cùng WooCommerce 11.2.1 + Yoast SEO 28.7 + Rank Math 1.0.280 (WP 7.1.3/PHP 8.3) | PASS — tích hợp 68/68 (nhận diện Yoast, Rank Math), E2E 59/59, nâng/hạ phiên bản, gỡ cài đặt giữ 6 bản nháp, không có PHP Fatal |
 | Model thật, lần chạy 8 (`060f29b`, run 39913479875) | **PASS** — CPU: 1.432–1.669 từ, QA 80–100; trình duyệt: 1.664 từ, 17,5 phút, nháp #5, QA 80 |
-| Model thật, lần chạy 9 (`97af80d`, run 39914553591) | **FAIL** ở job CPU: bài VI có brief QA 40 (giá rác "000000000đ", "Honda Vision 150.000đ/ngày" ≠ brief, 4 câu "tôi đã…", 3 câu bị báo nhầm mua/thuê). 3 bài còn lại 85–100 |
+| Model thật, lần chạy 9 (`97af80d`, run 39914553591) | **FAIL** ở job CPU: bài VI có brief QA 40 (giá rác "000000000đ", "Honda Vision 150.000đ/ngày" ≠ brief, 4 câu "tôi đã…", 3 câu bị báo nhầm mua/thuê). 3 bài còn lại 85–100. Trình duyệt: 1.647 từ, 25,4 phút, nháp #5, QA 60 (4 câu mua/thuê thật, thiếu từ khóa; 2 cảnh báo báo nhầm — lỗi #13, đã sửa; tính lại từ log: 85) |
 
 ## 6. Giới hạn chưa xử lý (NOT VERIFIED / còn thiếu)
 - **GPU WebGPU thật**: chưa có máy GPU. Chỉ kiểm thử WASM và SwiftShader.
@@ -122,6 +123,7 @@ Nên thử trên staging với một máy Chrome có GPU. Nếu chất lượng 
   - `060f29b`: 0.3.0-beta, QA nhóm, an toàn dữ liệu, CI tương thích;
   - `8441df8`: lỗi trình bày từ lần chạy 7;
   - `97af80d`: E2E khi WooCommerce đổi hướng subscriber;
-  - commit tiếp theo: sửa QA báo nhầm và số rác từ lần chạy 9.
+  - `fcaf19f`: sửa QA báo nhầm (phủ định, "deposits"), bỏ câu có số rác, tìm trùng theo cụm câu (lỗi 10–12);
+  - commit tiếp theo: sửa 2 cảnh báo nhầm từ bài trình duyệt của lần chạy 9 (lỗi 13).
 - Lần chạy 9 FAIL là kết quả thật. Model viết một bài sai giá và bịa trải nghiệm, QA chặn đúng (dưới 70 → nháp gắn nhãn cần sửa). Ngưỡng 70 **không** bị nới. Phần báo nhầm của QA đã được sửa.
 - Kết quả CI và lần chạy model thật cho commit cuối cùng được ghi trong mô tả PR #1. Vì mẫu sinh ngẫu nhiên, một lần chạy sau có thể đạt hoặc không đạt: đó là đo chất lượng model, không phải lỗi phần mềm.

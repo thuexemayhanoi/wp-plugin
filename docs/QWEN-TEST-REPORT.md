@@ -128,6 +128,13 @@ Bài vi-brief có giá rác "000000000đ/ngày", "Honda Vision 150.000đ/ngày" 
 QA chặn đúng; nhưng 3 cảnh báo mua/thuê là **báo nhầm** (câu "không phải mua xe mà là thuê" nói đúng) và một cảnh báo giá EN là
 báo nhầm ("deposits" số nhiều). Đã sửa hai lỗi của QA và thêm luật bỏ câu có số toàn 0; ngưỡng 70 giữ nguyên.
 
+Chromium/WASM (cùng lần chạy): **1.647 từ, 8 H2, 25,4 phút**, lưu nháp #5, **QA 60 → không đạt**. Trừ điểm theo log:
+giá lệch brief −15, 4 câu mua/thuê −10, "kể trải nghiệm" −10, thiếu nguyên văn từ khóa −5. Trong đó **2 cảnh báo là báo nhầm của QA**:
+"200.000 đồng/ngày cho xe Honda Vision, và 150.000 đồng/ngày cho xe Honda Wave" (đúng brief — giá viết trước tên xe nhưng QA
+gắn 150.000 cho Vision) và "…nên đảm bảo rằng mình đã cập nhật…" ("mình" = chính họ). Đã sửa cả hai, có test hồi quy từ
+nguyên câu (QA 67/67). Tính lại từ bảng trừ điểm trên: 100 − 10 − 5 = **85**; con số này là phép tính từ log, không phải
+chấm lại tệp bài (artifact không tải được từ môi trường này). 4 câu "người mua/mua xe" là lỗi thật của model, vẫn bị đánh dấu.
+
 ### 2.8 0.3.0-beta: chấm lại bài thật bằng QA mới (kiểm chứng dữ kiện + SEO)
 Cùng các bài gốc trong `docs/qwen-samples/`, cùng brief như CI, chấm bằng QA 0.3.0 (không chạy lại model):
 
@@ -147,10 +154,10 @@ Lần chạy model thật cho commit 0.3.0-beta cuối (prompt "THUÊ, không ph
 
 | Bộ kiểm thử | Kết quả cục bộ |
 |---|---|
-| `php tests/quality.php` (QA, gồm câu và bài thật bị lỗi) | 60/60 |
+| `php tests/quality.php` (QA, gồm câu và bài thật bị lỗi) | 67/67 |
 | `php tests/markdown.php` (Markdown → block) | 18/18 |
 | `node --test tests/js/*.test.mjs` (điều phối, Worker, lỗi thật của Qwen) | 29/29 |
 | `wp eval-file tests/wp-integration.php` (WP 7.1.3 + SQLite, cùng plugin cũ 1.2.0) | 66/66 (CI có Yoast + Rank Math: 68/68) |
 | `tests/rollback.sh` (0.3.0-beta ↔ 0.2.0-beta, dữ liệu giữ nguyên) | PASS |
 | `tests/e2e/admin-ui.e2e.cjs` (Chromium, model giả, cùng plugin cũ) | 59/59 |
-| Smoke plugin cũ `tests/smoke-v120.php` | 29/29 |
+| Smoke plugin cũ `tests/smoke-v120.php` (mock) | 27/27 |

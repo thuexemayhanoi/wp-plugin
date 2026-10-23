@@ -282,7 +282,7 @@ final class Quality {
         $flag('source', $sources, 'Dẫn nghiên cứu/thống kê/chuyên gia không có nguồn thật.');
         $check('factual', 'sources', !$sources, 10, $sources ? sprintf('%d câu dẫn nghiên cứu/thống kê không có nguồn.', count($sources)) : 'Không dẫn nguồn không có thật.');
 
-        $personal = self::matching($sentences, static fn (string $s): bool => (bool) preg_match('/' . self::WB . '(?:tôi\s+đã|chúng\s+tôi\s+đã|mình\s+đã|theo\s+kinh\s+nghiệm\s+của\s+(?:tôi|mình)|bản\s+thân\s+(?:tôi|mình)|i\s+have\s+(?:tried|rented|used|visited)|in\s+my\s+(?:own\s+)?experience|we\s+(?:have\s+)?tested)' . self::WE . '/iu', $s));
+        $personal = self::matching($sentences, static fn (string $s): bool => (bool) preg_match('/' . self::WB . '(?:tôi\s+đã|chúng\s+tôi\s+đã|^\W*mình\s+đã|mình\s+đã\s+(?:từng\s+)?(?:thuê|đi|dùng|sử\s+dụng|thử|trải\s+nghiệm|chạy|lái|ghé|đến|tới)|theo\s+kinh\s+nghiệm\s+của\s+(?:tôi|mình)|bản\s+thân\s+(?:tôi|mình)|i\s+have\s+(?:tried|rented|used|visited)|in\s+my\s+(?:own\s+)?experience|we\s+(?:have\s+)?tested)' . self::WE . '/iu', $s));
         $flag('experience', $personal, 'Kể trải nghiệm cá nhân — AI không có trải nghiệm thật.');
         $check('factual', 'experience', !$personal, 10, $personal ? sprintf('%d câu kể trải nghiệm cá nhân (AI không có trải nghiệm thật) — sửa hoặc xóa.', count($personal)) : 'Không bịa trải nghiệm cá nhân.');
 
@@ -542,26 +542,39 @@ final class Quality {
                 $pattern = '/' . self::WB . preg_replace('/\s+/u', '\s*', preg_quote((string) $name, '/')) . self::WE . '/iu';
                 if (preg_match_all($pattern, $lower, $mm, PREG_OFFSET_CAPTURE)) {
                     foreach ($mm[0] as [$text, $offset]) {
-                        $mentions[] = [$name, $offset + strlen($text)];
+                        $mentions[] = [$name, $offset + strlen($text), $offset];
                     }
                 }
             }
             if (!$mentions) {
                 continue;
             }
-            foreach (self::amounts($lower, true) as [$value, $offset]) {
+            foreach (self::amounts($lower, true) as [$value, $offset, $amount_end]) {
+                // "200.000 đồng/ngày cho xe Honda Vision": the amount names the item that follows it.
                 $best = null;
-                foreach ($mentions as [$name, $end]) {
-                    if ($end <= $offset && $offset - $end <= 80 && ($best === null || $end > $best[1])) {
-                        $best = [$name, $end];
+                foreach ($mentions as [$name, $end, $start]) {
+                    if ($start >= $amount_end && $start - $amount_end <= 60
+                        && preg_match('/^\s*' . self::UNIT . '?\s*(?:\/\s*(?:ngày|tuần|tháng|day|week|month)\s*)?(?:cho|for)\s+(?:\p{L}+\s+){0,3}$/iu', substr($lower, $amount_end, $start - $amount_end))
+                        && ($best === null || $start < $best[2])) {
+                        $best = [$name, $start, $start];
                     }
                 }
-                if ($best === null) {
+                if ($best !== null && preg_match('/' . self::WB . '(?:cọc|deposits?)' . self::WE . '/iu', mb_substr(substr($lower, 0, $offset), -24))) {
                     continue;
                 }
-                $between = substr($lower, $best[1], $offset - $best[1]);
-                if (preg_match('/' . self::WB . '(?:cọc|deposits?)' . self::WE . '/iu', $between)) {
-                    continue;
+                if ($best === null) {
+                    foreach ($mentions as [$name, $end, $start]) {
+                        if ($end <= $offset && $offset - $end <= 80 && ($best === null || $end > $best[1])) {
+                            $best = [$name, $end, $start];
+                        }
+                    }
+                    if ($best === null) {
+                        continue;
+                    }
+                    $between = substr($lower, $best[1], $offset - $best[1]);
+                    if (preg_match('/' . self::WB . '(?:cọc|deposits?)' . self::WE . '/iu', $between)) {
+                        continue;
+                    }
                 }
                 $known = false;
                 foreach ($prices[$best[0]] as $price) {
