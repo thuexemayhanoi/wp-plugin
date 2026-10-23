@@ -116,7 +116,7 @@ rà soát*, **không** chứng nhận nội dung đúng, không bảo đảm SEO
 python3 scripts/vendor_qwen_deps.py            # lấy runtime từ npm, kiểm tra hash
 php qwen-local-writer/tests/quality.php        # QA (27 kiểm tra, gồm bài Qwen thật bị lỗi)
 php qwen-local-writer/tests/markdown.php       # Markdown → block an toàn (18)
-node --test qwen-local-writer/tests/js/*.test.mjs   # điều phối bài viết + Worker + lỗi thật của Qwen (21)
+node --test qwen-local-writer/tests/js/*.test.mjs   # điều phối bài viết + Worker + lỗi thật của Qwen (24)
 python3 scripts/build_qwen.py                  # dist/qwen-local-writer.zip
 wp eval-file qwen-local-writer/tests/wp-integration.php   # trên WordPress dùng-một-lần (49)
 WP_URL=… WP_CLI="wp --path=…" node qwen-local-writer/tests/e2e/admin-ui.e2e.cjs   # Chromium, model giả (45)

@@ -60,13 +60,25 @@ model chép số `Date.now()` có trong tiêu đề thử nghiệm vào bài (QA
 và một gạch đầu dòng bị cắt giữa chừng kết thúc bằng dấu phẩy (nay bị bỏ). Nội dung vẫn có lỗi kiến thức ("thị trấn Long
 Biên", "xe được bán ra") — cần biên tập.
 
+### 2.4 Lần chạy 4 (run 39901303799, commit e1a46d9) — biến thiên do lấy mẫu ngẫu nhiên
+| Bài | Số từ | H2 | QA |
+|---|---|---|---|
+| `vi-brief-q4f16` | 1.874 | 8 | 100 |
+| `en-brief-q4f16` | 1.533 | 8 | 100 |
+| `vi-general-q4` | 1.675 | 6 | **55** — lặp nguyên văn đoạn văn, 9/64 câu lặp, từ khóa lặp 11 lần |
+| `en-general-q4` | 1.488 | 8 | 90 — từ khóa lặp dày |
+
+Job **FAIL đúng**: QA chặn bài lặp. Nguyên nhân gốc: lời gọi "viết tiếp" chép lại đoạn đã có (kèm dòng prompt "Bài viết: …")
+và từ khóa nằm trong prompt mọi mục. Đã sửa: loại câu đã xuất hiện ở bất kỳ phần nào của bài (kiểm tra trước khi quyết
+định viết lại), xoá dòng lặp lại prompt, chỉ đưa từ khóa vào dàn ý/mở bài/kết luận, bỏ H2 rỗng.
+
 ## 3. Kiểm thử tự động (không dùng model)
 
 | Bộ kiểm thử | Kết quả cục bộ |
 |---|---|
 | `php tests/quality.php` (QA, gồm bài thật bị lỗi) | 27/27 |
 | `php tests/markdown.php` (Markdown → block) | 18/18 |
-| `node --test tests/js/*.test.mjs` (điều phối, Worker, lỗi thật của Qwen) | 21/21 |
+| `node --test tests/js/*.test.mjs` (điều phối, Worker, lỗi thật của Qwen) | 24/24 |
 | `wp eval-file tests/wp-integration.php` (WP 7.1.3 + SQLite, cùng plugin cũ 1.2.0) | 49/49 |
 | `tests/e2e/admin-ui.e2e.cjs` (Chromium, model giả, cùng plugin cũ) | 45/45 |
 | Smoke plugin cũ `tests/smoke-v120.php` | 27/27 |

@@ -2,6 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  dropRepeats, introMessages,
   countWords, parseOutline, cleanPart, writeArticle, articlePlan, tokenBudget, normalizeInput,
   outlineMessages, sectionMessages, systemPrompt, classifyError, explainError, foreignScriptRatio, MODEL,
 } from '../../assets/qlw-core.js';
@@ -137,6 +138,35 @@ test('real Qwen3-0.6B artefacts, run 39898298326: "7th Section:" headings, chatb
   assert.equal(cleanPart('- Mũ bảo hiểm\n- Áo mưa').text, '- Mũ bảo hiểm\n- Áo mưa');
 });
 
+test('real run 39901303799: continuation copied earlier paragraphs and the prompt line; keyword stuffed', () => {
+  const seen = new Set();
+  const first = dropRepeats('Để bảo quản xe tay ga đúng thời điểm cần chú ý nhiều yếu tố quan trọng. Giá 200.000đ/ngày.', seen);
+  const again = dropRepeats('Để bảo quản xe tay ga đúng thời điểm cần chú ý nhiều yếu tố quan trọng. Thêm một ý hoàn toàn mới cho người đọc tham khảo.', seen);
+  assert.equal(first.dropped, 0);
+  assert.equal(again.dropped, 1);
+  assert.equal(again.text, 'Thêm một ý hoàn toàn mới cho người đọc tham khảo.');
+  assert.equal(cleanPart('Bài viết: **Cách bảo quản xe tay ga trong mùa mưa ở Hà Nội**\nNội dung thật của đoạn văn cho người đọc.').text, 'Nội dung thật của đoạn văn cho người đọc.');
+  const withKw = normalizeInput({ title: 'Cách bảo quản xe tay ga', keyword: 'bảo quản xe tay ga' });
+  assert.match(introMessages(withKw, [], 120)[1].content, /Từ khóa chính: bảo quản xe tay ga/);
+  assert.ok(!sectionMessages(withKw, ['Một', 'Hai ba bốn'], 1, 180)[1].content.includes('Từ khóa chính'));
+});
+
+test('writeArticle removes sentences repeated across parts', async () => {
+  const repeated = 'Câu này bị mô hình nhỏ lặp lại nguyên văn ở nhiều phần khác nhau.';
+  let n = 0;
+  const generate = async (messages) => {
+    const p = messages.at(-1).content;
+    if (/Liệt kê \d+ tiêu đề/.test(p)) return { text: 'Chọn loại xe phù hợp\nGiấy tờ cần chuẩn bị\nĐặt cọc và hợp đồng\nKiểm tra xe khi nhận\nLái xe an toàn nội thành' };
+    const want = Number(p.match(/khoảng (\d+)/)?.[1] || 100);
+    const parts = [repeated];
+    for (let i = 0; countWords(parts.join(' ')) < want; i++) parts.push(`Lần ${++n} nêu một lưu ý riêng biệt cho người thuê xe số ${i}.`);
+    return { text: parts.join(' ') };
+  };
+  const out = await writeArticle({ input, generate });
+  assert.equal(out.markdown.split(repeated).length - 1, 1);
+  assert.ok(out.stats.warnings.some(w => w.startsWith('repeat:')));
+});
+
 test('writeArticle produces ~1,500 words with 7 H2 sections and a conclusion', async () => {
   const events = [];
   const out = await writeArticle({ input, generate: fakeGenerator(), onProgress: e => events.push(e.phase) });
@@ -186,11 +216,24 @@ test('English articles use an English conclusion heading', async () => {
     const p = messages.at(-1).content;
     if (/List \d+ section titles/.test(p)) return { text: 'Choosing the right bike\nDocuments to prepare\nDeposits and contracts\nInspecting the bike\nRiding safely downtown' };
     const want = Number(p.match(/about (\d+)/)?.[1] || 100);
-    return { text: Array.from({ length: Math.ceil(want / 10) }, (_, i) => `Sentence ${i} gives a distinct and useful riding tip.`).join(' ') };
+    calls++;
+    return { text: Array.from({ length: Math.ceil(want / 10) }, (_, i) => `Sentence ${calls}.${i} gives a distinct and useful riding tip.`).join(' ') };
   };
+  let calls = 0;
   const out = await writeArticle({ input: en, generate });
   assert.match(out.markdown, /^## Conclusion$/m);
   assert.equal(out.headings.length, 5);
+});
+
+test('a section left empty by repeated text is dropped instead of leaving a bare H2', async () => {
+  const en = normalizeInput({ title: 'Renting a motorbike in Hanoi', language: 'en' });
+  const same = Array.from({ length: 20 }, (_, i) => `Sentence ${i} gives the same riding tip every single time.`).join(' ');
+  const generate = async (messages) => /List \d+ section titles/.test(messages.at(-1).content)
+    ? { text: 'Choosing the right bike\nDocuments to prepare\nDeposits and contracts\nInspecting the bike\nRiding safely downtown' }
+    : { text: same };
+  const out = await writeArticle({ input: en, generate });
+  assert.ok(!/^## [^\n]+\n\n## /m.test(out.markdown), out.markdown);
+  assert.ok(out.stats.retries > 0);
 });
 
 test('errors are classified for accurate messages', () => {
