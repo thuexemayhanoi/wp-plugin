@@ -220,4 +220,9 @@ foreach (['Chúng tôi đã thử chiếc Vision này trên đường đèo.', '
     check(in_array('experience', $failed_ids(Quality::assess(vi_article(8, 7, $line), 1500, 'vi')), true), 'an invented experience is flagged: ' . mb_substr($line, 0, 40));
 }
 
+// Run 39962993674: a heading listing two kinds of vehicle is not a fuel claim; the wrong prices next to it are.
+$amp = Quality::assess(en_article() . "\n\n## Available Options – 50cc Scooters & Electric Bikes\n\n" . str_repeat('Check the brakes, lights and tyres before you ride away. ', 8), 1500, 'en', $en_brief, '', ['title' => 'How to rent a motorbike in Hanoi']);
+check(!in_array('fuel', $failed_ids($amp), true), '"50cc Scooters & Electric Bikes" is a list, not a fuel claim');
+check(in_array('fuel', $failed_ids(Quality::assess(en_article() . "\n\nThe Honda Air Blade is an electric scooter with a quiet motor.", 1500, 'en')), true), '"Honda Air Blade is an electric scooter" is still flagged');
+
 finish('Quality');

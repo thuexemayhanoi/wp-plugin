@@ -177,6 +177,13 @@ Chromium/WASM: **1.674 từ, 7 H2, 39,2 phút** (1,2 token/s, 2 lần viết l�
 Sau lần chạy này: H3 cũng được kiểm tra; "chúng tôi đã …" chỉ tính là trải nghiệm khi đi với động từ trải nghiệm (thuê, thử,
 kiểm tra…); "tôi (rất) hài lòng" được tính là trải nghiệm. Ngưỡng 70 không đổi.
 
+### 2.16 Lần chạy 15 (run 39962993674, commit 27202c0) — FAIL ở job CPU
+CPU: vi-brief 1.836 / QA 90 (8 câu "người mua/mua xe" — lỗi thật); **en-brief 1.513 / QA 65 → không đạt**: giá sai thật ("a 150cc
+Honda Wave and a 50cc Honda Air Blade are available for 2–3 million VND and 3 million" — lấy tiền cọc làm giá, sai cả dung tích,
+−15), 1 mục < 60 từ (−5), "choosing between renting or buying" (−5), và **−10 báo nhầm**: tiêu đề "Available Options – 50cc
+Scooters & Electric Bikes" liệt kê hai loại xe nhưng "&" chưa được coi là dấu liệt kê (**lỗi #17**). vi-general 1.602 / 100;
+en-general 1.482 / 100. Bỏ phần báo nhầm, bài vẫn có lỗi giá thật phải sửa tay (75 điểm theo bảng trừ điểm).
+
 ### 2.8 0.3.0-beta: chấm lại bài thật bằng QA mới (kiểm chứng dữ kiện + SEO)
 Cùng các bài gốc trong `docs/qwen-samples/`, cùng brief như CI, chấm bằng QA 0.3.0 (không chạy lại model):
 
@@ -196,7 +203,7 @@ Lần chạy model thật cho commit 0.3.0-beta cuối (prompt "THUÊ, không ph
 
 | Bộ kiểm thử | Kết quả cục bộ |
 |---|---|
-| `php tests/quality.php` (QA, gồm câu và bài thật bị lỗi) | 76/76 |
+| `php tests/quality.php` (QA, gồm câu và bài thật bị lỗi) | 78/78 |
 | `php tests/markdown.php` (Markdown → block) | 18/18 |
 | `node --test tests/js/*.test.mjs` (điều phối, Worker, lỗi thật của Qwen) | 30/30 |
 | `wp eval-file tests/wp-integration.php` (WP 7.1.3 + SQLite, cùng plugin cũ 1.2.0) | 66/66 (CI có Yoast + Rank Math: 68/68) |

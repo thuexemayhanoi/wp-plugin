@@ -423,7 +423,8 @@ final class Quality {
                     if (strlen($between) > 80) {
                         continue;
                     }
-                    if (!preg_match('/[,;\/]|' . self::WB . '(?:và|hoặc|cùng|lẫn|đến|tới|sang|so\s+với|thay\s+vì|khác\s+với|không\s+phải|chứ\s+không|cũng\s+như|and|or|to|from|versus|vs|than|instead\s+of|unlike|not|as\s+well\s+as|plus)' . self::WE . '/iu', $between)) {
+                    // "50cc Scooters & Electric Bikes" (run 39962993674) lists two kinds of vehicle.
+                    if (!preg_match('/[,;\/&+]|' . self::WB . '(?:và|hoặc|cùng|lẫn|đến|tới|sang|so\s+với|thay\s+vì|khác\s+với|không\s+phải|chứ\s+không|cũng\s+như|and|or|to|from|versus|vs|than|instead\s+of|unlike|not|as\s+well\s+as|plus)' . self::WE . '/iu', $between)) {
                         return true;
                     }
                 }
