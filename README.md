@@ -4,7 +4,7 @@
 >
 > The **separate `qwen-local-writer/` WordPress plugin** is a no-paid-API, WebGPU browser-local Qwen3-0.6B draft editor aiming for ~1,500 words and a **technical** QA threshold of 70/100. It writes WordPress **drafts only**; no paid Claude/Gemini/OpenAI inference, no API keys, no hidden PHP model backend.
 >
-> **Beta warning:** Syntax/QA/build CI passing does not mean actual WebGPU inference or WordPress staging activation has been verified. Qwen can hallucinate and may miss 1,500 words; browser must stay open; initial JS library uses a pinned CDN module requiring vendoring and security review before production. Do **not** deploy to the active website yet.
+> **Beta 0.2.0 status:** the runtime (Transformers.js 4.3.1 + ONNX Runtime Web) is bundled in the ZIP — no CDN. Real Qwen3-0.6B inference (pinned revision `58ca03a5`) is exercised in CI on CPU and inside Chromium through the plugin UI (WASM), and drafts are saved into a real WordPress; see [docs/QWEN-TEST-REPORT.md](docs/QWEN-TEST-REPORT.md). **Not yet verified:** a real WebGPU GPU and the live website. Qwen 0.6B can hallucinate; the browser tab must stay open. Install on staging first.
 >
 > **Legacy preservation:** The older API-driven plugin **below** remains unchanged in this repository to protect existing campaigns and database state. The standalone Qwen ZIP contains none of the commercial-provider PHP classes. No destructive migration or automated removal of existing credentials has taken place.
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## Qwen Local Writer 0.2.0-beta — 2026-10-23 (plugin riêng trong `qwen-local-writer/`)
+- Bỏ import thư viện từ CDN: Transformers.js 4.3.1 + ONNX Runtime Web 1.31.0-dev được đóng gói trong ZIP, lấy từ npm và kiểm tra sha512/sha256 (`scripts/vendor_qwen_deps.py`, `assets/vendor/manifest.json`).
+- Ghim model `onnx-community/Qwen3-0.6B-ONNX` revision `58ca03a5e7b354b480b1a82b34bde8dc7b854cc0`; chỉ cho phép model này.
+- Worker mới: phát hiện GPU thật/giả lập và `shader-f16` (q4f16/q4), dự phòng WASM đa luồng (COOP/COEP chỉ trên trang plugin), streaming, dừng ngay, tắt chế độ thinking của Qwen3, thông báo lỗi chính xác (mạng, 404, RAM, dung lượng, GPU ngắt).
+- Viết theo dàn ý 7 H2 + mở bài + kết luận (~1.500 từ), tự điều chỉnh độ dài, viết lại/bổ sung khi đầu ra yếu, làm sạch `<think>`, lời dẫn, H1/H2, chữ Hán.
+- Lưu nháp an toàn: block Gutenberg H2–H3, kiểm tra trùng tiêu đề, cập nhật đúng bản nháp thay vì tạo bài trùng, không ghi đè bài đã rời trạng thái Nháp, kiểm tra quyền gán danh mục, hộp Markdown & QA trong editor.
+- QA kỹ thuật 70/100 mở rộng: sai ngôn ngữ, chữ Hán, câu lặp, phần quá mỏng, bịa trải nghiệm, giá/số điện thoại/%/link không có trong brief.
+- Giao diện mới đáp ứng desktop/iPhone/iPad, kiểm tra thiết bị, tiến độ tải/viết, khôi phục bản đang soạn, xoá cache model, cài đặt tự lưu trữ model.
+- Kiểm thử: PHP unit, node:test, tích hợp WordPress thật (vai trò, nonce, nháp, kses, huỷ kích hoạt/gỡ), E2E Chromium; CI chạy suy luận Qwen thật VI/EN.
+
 ## 1.2.0 — 2026-10-12
 - Rút gọn trang Viết bài nhanh và Cài đặt API: chỉ chọn AI đã lưu, tiêu đề / Excel, 1–100 bài, 1.500–10.000 từ, danh mục cha/con, nháp hoặc chủ động xuất bản.
 - Chọn mục tiêu số thẻ H2, H3, H4, H5, H6; không sinh H1 vì WordPress dùng tiêu đề bài.

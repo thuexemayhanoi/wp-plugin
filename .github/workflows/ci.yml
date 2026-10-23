@@ -121,8 +121,10 @@ jobs:
           wp core install --path=$WP_PATH --url=$WP_URL --title="QLW CI" --admin_user=admin --admin_password=admin-pass-123 --admin_email=admin@example.com --skip-email
           wp user create contrib1 contrib1@example.com --role=contributor --user_pass=contrib-pass-123 --path=$WP_PATH
           wp user create sub1 sub1@example.com --role=subscriber --user_pass=sub-pass-123 --path=$WP_PATH
-      - name: Install and activate the ZIP
+      - name: Install and activate the ZIP next to the existing Multi AI SEO Content Factory
         run: |
+          python3 scripts/build_plugin.py
+          wp plugin install dist/multi-ai-seo-content-factory.zip --activate --path=$WP_PATH
           wp plugin install dist/qwen-local-writer.zip --activate --path=$WP_PATH
           wp plugin list --path=$WP_PATH
       - name: WordPress integration tests (real WP functions, roles, nonces, drafts)

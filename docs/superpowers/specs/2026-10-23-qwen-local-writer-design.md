@@ -1,30 +1,38 @@
-# Qwen Local Writer — migration design (2026-10-23)
+# Qwen Local Writer — migration design (2026-10-23, updated for 0.2.0-beta)
 
 ## Problem
 The existing Multi AI SEO Content Factory 1.2.0 relies on commercial Claude, Gemini and OpenAI APIs to write articles. The site owner wants **no commercial API**, a ~1,500-word Vietnamese/English draft, and a minimum **technical QA target of 70/100**, while keeping existing WordPress posts and data intact.
 
 ## Scope and rationale
-This is an **architectural change**, not a provider-name swap: PHP shared hosting cannot directly run Qwen3 generation in typical WordPress requests. An embedding-only model cannot write text. Qwen3-0.6B text-generation ONNX with Transformers.js can be tested on an administrator's WebGPU-enabled desktop browser; a larger local model can be a separate user-controlled offline worker in a later implementation, but never a paid inference provider. Word count is an editorial target, not a guarantee. Technical QA 70 is not factual verification.
+This is an **architectural change**, not a provider-name swap: PHP shared hosting cannot run Qwen3 generation inside WordPress requests. An embedding-only model cannot write text. Qwen3-0.6B text-generation ONNX with Transformers.js runs in the administrator's browser (WebGPU, or WASM on CPU). Word count is an editorial target, not a guarantee. Technical QA 70 is not factual verification.
 
 ## Approaches evaluated
-1. PHP invokes Qwen directly on shared hosting — rejected (high memory/runtime and no verified model environment).
+1. PHP invokes Qwen directly on shared hosting — rejected (memory/runtime, no verified model environment).
 2. Silent remote service — rejected (violates no-API intent, privacy and costs).
-3. **Selected for initial prototype:** browser-local Qwen3-0.6B ONNX; explicit WebGPU compatibility and download; staged section generation; WordPress AJAX to save drafts; deterministic QA score and human review. Browser tab must remain open during generation. No server-side background AI is claimed.
+3. **Selected:** browser-local Qwen3-0.6B ONNX in a Web Worker; explicit device check and download; staged section generation; WordPress AJAX to save drafts; deterministic QA score and human review. The tab must stay open; no server-side background AI.
+
+## Architecture (0.2.0-beta)
+- `assets/qlw-core.js` — DOM-free logic shared by the browser and the Node real-model test: prompts (VI/EN, brief treated as data), outline parsing, output cleanup, `writeArticle()` orchestration (outline → intro → 7 H2 → conclusion, adaptive lengths, retry, top-up), sampling clamps, error classification.
+- `assets/qwen-worker.js` — module Worker: WebGPU adapter/`shader-f16` probe, device plan (real GPU q4f16/q4 → WASM q4; software adapters skipped in auto mode), model allowlist + pinned revision, same-origin self-hosting, streaming, interrupt, cache clearing. Bootstrapped from a `blob:` URL so it inherits cross-origin isolation.
+- `assets/local-writer.js` — admin UI only (never on the public site).
+- `assets/vendor/` — Transformers.js 4.3.1 and the exact ONNX Runtime Web build it embeds; fetched from npm at build time, verified against `manifest.json`, shipped in the ZIP, never loaded from a CDN.
+- `includes/class-ajax.php` — `qlw_save_draft`, `qlw_qa_preview` (capability + nonce), duplicate guard, draft-only insert/update.
+- `includes/class-markdown.php` — Markdown → core/heading (H2–H3), core/paragraph, core/list blocks; all other markup escaped; `wp_kses_post`.
+- `includes/class-quality.php` — deterministic technical QA.
+- `includes/class-plugin.php`, `includes/view-admin.php` — menu, COOP/COEP on the writer screen only, settings (model source, isolation), metabox.
 
 ## Repo and data safety
 - Only thuexemayhanoi/wp-plugin, feature branch; no live WordPress changes.
-- Keep legacy v1.2 files and database intact during migration. A standalone qwen-local-writer/ plugin prototype is built beside the legacy files to avoid breaking running campaigns. It does not call existing API providers or share their stored keys.
-- Do **not** merge to main or replace the installed plugin until install/QA/model tests pass and the owner explicitly approves deployment.
-- No automatic publication, rewriting old posts, or deleting campaigns. No model weights in ZIP.
-- Any remote CDN library loaded into WordPress Admin is a temporary beta dependency and must be self-hosted/pinned with verified integrity before production release.
+- Legacy v1.2 files and database untouched. The plugin does not call existing API providers or read their stored keys.
+- No automatic publication, no rewriting of other posts, no deletion of campaigns. Uninstall removes only `qlw_settings`/`qlw_version`. No model weights in the ZIP.
+- Do **not** merge to main or replace the installed plugin until the owner explicitly approves deployment.
 
-## Minimum delivery
-- Separate installable Qwen Local Writer ZIP.
-- Admin screen with title, verified facts/brief, language, category, on-demand model download, progress, cancel, word count, Markdown preview, save-as-draft.
-- Text generation in sections, no H1. The post title becomes H1 via theme. No invented business facts, sources or links.
-- Server-side QA scoring, including word count, H2 coverage, repeated text, placeholders and unsafe content; 70 threshold results in review warning not auto-publication.
-- WordPress authentication, nonce and post edit capability, strict size bounds, WordPress sanitization and post ID/edit link readback.
-- Tests of QA and saved-draft security, documentation, separate packaging; actual WebGPU inference must be marked unverified until tested on suitable hardware.
-
-## Release gate
-CI PHP syntax and deterministic tests must pass; ZIP must activate in disposable WordPress; model download/inference must be witnessed and evaluated on real VI/EN prompts; no commercial API call may occur; 1,500-word generation and QA 70 outcomes measured on a sample, not promised. Fail safe if WebGPU unavailable. No production merge until reviewed.
+## Release gate and status
+| Gate | Status |
+|---|---|
+| CI PHP syntax, unit tests, ZIP validation | automated (`ci.yml`) |
+| ZIP activates on a clean WordPress (6.9.10/PHP 8.1, 7.1.3/PHP 8.3), integration + browser E2E, uninstall keeps posts | automated (`ci.yml`, job `qwen-wordpress`) |
+| Real model download and inference, VI + EN, measured words and QA | automated (`qwen-real-inference.yml`); results in `docs/QWEN-TEST-REPORT.md` |
+| No commercial API call, no CDN | build-time scan + E2E network assertions |
+| Real WebGPU GPU, iPhone/iPad Safari with the real model, live staging site | **not verified** — needs the owner's hardware/staging |
+| Production merge/deploy | **not authorised** |

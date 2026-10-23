@@ -205,6 +205,26 @@ async function fillInput(page, title) {
     await context.close();
   }
 
+  // ---- Administrator settings: self-hosted model folder (same origin only) ----
+  {
+    const context = await newContext(browser);
+    const page = await context.newPage();
+    await login(page, 'admin', 'admin-pass-123');
+    await openWriter(page);
+    await page.click('.qlw-settings summary');
+    await page.check('input[name="model_source"][value="self"]');
+    await Promise.all([page.waitForURL(/qlw-saved=1/), page.click('.qlw-settings [type="submit"]')]);
+    const config = await page.evaluate(() => JSON.parse(document.getElementById('qlw-app').dataset.config));
+    check(config.selfHostedBase.startsWith(BASE + '/') && config.selfHostedBase.endsWith('/qwen-local-writer/models/'), 'self-hosted base URL is on the same origin: ' + config.selfHostedBase);
+    await page.waitForSelector('#qlw-env li[data-ok]');
+    check(/sẵn sàng/.test(await loadModel(page, 'wasm')), 'model loads with the self-hosted source configured (fake model)');
+    await page.click('.qlw-settings summary');
+    await page.check('input[name="model_source"][value="huggingface"]');
+    await Promise.all([page.waitForURL(/qlw-saved=1/), page.click('.qlw-settings [type="submit"]')]);
+    check(wp('option get qlw_settings --format=json').includes('"huggingface"'), 'settings saved back to Hugging Face');
+    await context.close();
+  }
+
   // ---- Phone and tablet layouts ----
   for (const [device, file] of [['iPhone 13', 'iphone.png'], ['iPad (gen 7)', 'ipad.png']]) {
     const context = await newContext(browser, { device });
