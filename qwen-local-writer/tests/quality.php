@@ -204,4 +204,12 @@ check(!in_array('rent-buy', $failed_ids($modal), true), '"không bắt buộc ph
 $label = Quality::assess(vi_article(8, 7, 'Thời gian mua xe: Không phải mua mà thuê, với giá tham khảo như trên.'), 1500, 'vi', '', '', $rental);
 check(in_array('rent-buy', $failed_ids($label), true), '"Thời gian mua xe:" in a rental article is still flagged');
 
+// Run 39950921303: a deposit written after its amount ("a 3 million VND deposit") is not a model price.
+$after = Quality::assess(en_article() . "\n\nAnother choice is the Honda Air Blade 200,000 VND/day, which provides a 3 million VND deposit.", 1500, 'en', $en_brief, '', ['title' => 'How to rent a motorbike in Hanoi']);
+check(!in_array('price-mismatch', $failed_ids($after), true), '"…200,000 VND/day, which provides a 3 million VND deposit" is correct');
+$vi_after = Quality::assess(vi_article(8, 7, 'Honda Vision 200.000đ/ngày, 4–5 triệu tiền cọc.'), 1500, 'vi', $nguyen_tu, '', $rental);
+check(!in_array('price-mismatch', $failed_ids($vi_after), true), '"4–5 triệu tiền cọc" after the price is a deposit');
+$still = Quality::assess(vi_article(8, 7, 'Honda Wave 200.000đ/ngày và cọc 2 triệu.'), 1500, 'vi', $nguyen_tu, '', $rental);
+check(in_array('price-mismatch', $failed_ids($still), true), 'a wrong price followed by "và cọc …" is still caught');
+
 finish('Quality');

@@ -57,12 +57,13 @@
 | 10 | QA mới báo nhầm: câu phủ định đúng ("không phải mua xe mà là thuê") bị tính là lẫn mua/thuê; "deposits" số nhiều không được nhận là tiền cọc | lần chạy thật 9 (bài VI QA 40) | trung bình |
 | 11 | Model in giá rác "000000000đ/ngày" | lần chạy thật 9 | thấp |
 | 12 | Kiểm tra trùng nội dung bỏ sót bản sao khi site có nhiều bài cùng từ khóa (chỉ tìm theo từ khóa/tiêu đề) | kiểm thử tích hợp lặp lại trên CSDL >100 bài | trung bình |
+| 15 | QA báo nhầm: tiền cọc viết sau số tiền ("…which provides a 3 million VND deposit", "4–5 triệu tiền cọc") bị tính là giá thuê lệch brief | lần chạy thật 13 (bài EN QA 80) | trung bình |
 | 14 | Model vẫn bịa trải nghiệm "tôi đã…" (lần 9, 10, 12), hứa "không cần đặt cọc" chép sai từ brief, viết "thị trấn Hà Nội"; QA báo nhầm "không bắt buộc phải mua xe" | lần chạy thật 12 (bài VI QA 60) | trung bình |
 | 13 | QA báo nhầm: giá viết trước tên xe ("200.000 đồng/ngày cho xe Honda Vision, và 150.000 đồng/ngày cho xe Honda Wave") bị gắn vào xe đứng trước; "rằng mình đã cập nhật" ("mình" = chính họ) bị coi là kể trải nghiệm | lần chạy thật 9, bài trình duyệt (QA 60) | trung bình |
 
 ## 4. Lỗi đã sửa
-Đã sửa lỗi 1–8, 10, 11 (câu có số toàn 0 bị bỏ khi làm sạch, QA vẫn đánh dấu), 12 (tìm thêm theo 2 cụm câu nguyên văn) 13 (giá gắn với tên xe ngay sau "cho/for"; "mình đã" chỉ tính khi mở đầu câu hoặc đi với động từ trải nghiệm) và 14 (làm sạch bỏ câu bịa trải nghiệm và câu hứa miễn cọc không có trong brief, sửa "thị trấn"; QA nhận phủ định "không bắt buộc phải"), mỗi lỗi có kiểm thử hồi quy:
-- `tests/quality.php` (69 kiểm tra);
+Đã sửa lỗi 1–8, 10, 11 (câu có số toàn 0 bị bỏ khi làm sạch, QA vẫn đánh dấu), 12 (tìm thêm theo 2 cụm câu nguyên văn) 13 (giá gắn với tên xe ngay sau "cho/for"; "mình đã" chỉ tính khi mở đầu câu hoặc đi với động từ trải nghiệm) 14 (làm sạch bỏ câu bịa trải nghiệm và câu hứa miễn cọc không có trong brief, sửa "thị trấn"; QA nhận phủ định "không bắt buộc phải") và 15 (số tiền có "cọc/deposit" ngay sau là tiền cọc), mỗi lỗi có kiểm thử hồi quy:
+- `tests/quality.php` (72 kiểm tra);
 - `tests/js/core.test.mjs` (30);
 - `tests/wp-integration.php` (66);
 - `tests/e2e/admin-ui.e2e.cjs` (59);
@@ -75,7 +76,7 @@ Lỗi 9 thuộc plugin cũ, chỉ được ghi vào tài liệu.
 | Bộ kiểm thử | Kết quả |
 |---|---|
 | `php -l` mọi file PHP của repo | PASS |
-| `php qwen-local-writer/tests/quality.php` | 69/69 PASS |
+| `php qwen-local-writer/tests/quality.php` | 72/72 PASS |
 | `php qwen-local-writer/tests/markdown.php` | 18/18 PASS |
 | `node --test qwen-local-writer/tests/js/*.test.mjs` | 30/30 PASS |
 | `node --check` mọi JS của plugin + `assets/admin.js` | PASS |
@@ -92,7 +93,9 @@ Kiểm thử trên GitHub Actions (chi tiết ở mục 8):
 | Kiểm thử | Kết quả |
 |---|---|
 | CI `5a0620a` (run 39920519352): PHP 8.1/8.3 lint + unit + build; WP 6.9.10/PHP 8.1; WP 7.1.3/PHP 8.3; WP 7.1.3/PHP 8.3 + WooCommerce + Yoast SEO + Rank Math | PASS (5/5 job; job phát hành theo tag bỏ qua vì không có tag) |
-| Model thật, lần chạy 12 (`035a914`, chỉ đổi tài liệu, run 39949306000) | **FAIL** ở job CPU: bài VI có brief QA 60 ("thị trấn Hà Nội", hứa "không cần đặt cọc", 3 câu "tôi đã…") — lỗi thật của model, QA chặn đúng; dẫn tới sửa lỗi #14 |
+| CI `f66e118` (run 39950921417) | PASS (5/5 job, gồm WooCommerce + Yoast SEO + Rank Math) |
+| Model thật, lần chạy 13 (`f66e118`, run 39950921303) | **PASS** — CPU: 1.520–1.600 từ, QA 80–100, không còn câu "tôi đã…"/miễn cọc; trình duyệt: 1.630 từ, 17,7 phút, nháp #5, QA 85. Lộ thêm báo nhầm #15 |
+| Model thật, lần chạy 12 (`035a914`, chỉ đổi tài liệu, run 39949306000) | **FAIL** ở job CPU: bài VI có brief QA 60 ("thị trấn Hà Nội", hứa "không cần đặt cọc", 3 câu "tôi đã…") — lỗi thật của model, QA chặn đúng; dẫn tới sửa lỗi #14. Trình duyệt PASS: 1.724 từ, 29,5 phút, QA 85 |
 | Model thật, lần chạy 11 (`5a0620a`, run 39920519362) | **PASS** — CPU: 1.480–1.738 từ, QA 75–100 (bắt được giá Vision/Wave tráo "700.000đ/tuần cho xe Honda Vision", giá 50.000đ bịa, link bịa); trình duyệt: 1.754 từ, 27,5 phút, nháp #5, QA 80 |
 | Model thật, lần chạy 10 (`fcaf19f`, run 39917543001) | **PASS** — CPU: 1.535–1.703 từ, QA 80–100; trình duyệt: 1.686 từ, 24,9 phút, nháp #5, QA 85 |
 | CI `97af80d` (run 39914553616): PHP 8.1/8.3 lint + unit + build; WP 6.9.10/PHP 8.1; WP 7.1.3/PHP 8.3 | PASS |
@@ -131,6 +134,7 @@ Nên thử trên staging với một máy Chrome có GPU. Nếu chất lượng 
   - `fcaf19f`: sửa QA báo nhầm (phủ định, "deposits"), bỏ câu có số rác, tìm trùng theo cụm câu (lỗi 10–12);
   - `5a0620a`: sửa 2 cảnh báo nhầm từ bài trình duyệt của lần chạy 9 (lỗi 13) — CI và lần chạy thật 11 PASS;
   - `035a914`: tài liệu lần chạy 10–11 (lần chạy thật 12 trên mã này FAIL đúng);
-  - commit tiếp theo: lỗi #14 (làm sạch câu bịa trải nghiệm / miễn cọc / "thị trấn").
+  - `f66e118`: lỗi #14 (làm sạch câu bịa trải nghiệm / miễn cọc / "thị trấn") — CI và lần chạy thật 13 PASS;
+  - commit tiếp theo: lỗi #15 (tiền cọc viết sau số tiền).
 - Lần chạy 9 FAIL là kết quả thật. Model viết một bài sai giá và bịa trải nghiệm, QA chặn đúng (dưới 70 → nháp gắn nhãn cần sửa). Ngưỡng 70 **không** bị nới. Phần báo nhầm của QA đã được sửa.
 - Kết quả CI và lần chạy model thật cho commit cuối cùng được ghi trong mô tả PR #1. Vì mẫu sinh ngẫu nhiên, một lần chạy sau có thể đạt hoặc không đạt: đó là đo chất lượng model, không phải lỗi phần mềm.

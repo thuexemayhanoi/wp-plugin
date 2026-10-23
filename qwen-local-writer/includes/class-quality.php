@@ -552,6 +552,10 @@ final class Quality {
                 continue;
             }
             foreach (self::amounts($lower, true) as [$value, $offset, $amount_end]) {
+                // "a 3 million VND deposit", "4–5 triệu tiền cọc" (run 39950921303): a deposit, not a model price.
+                if (preg_match('/^(?:\s*[–-]\s*\d[\d.,]*)?(?:\s*' . self::UNIT . '){0,2}\s*(?:tiền\s+)?(?:đặt\s+)?(?:cọc|deposits?)' . self::WE . '/iu', substr($lower, $amount_end, 48))) {
+                    continue;
+                }
                 // "200.000 đồng/ngày cho xe Honda Vision": the amount names the item that follows it.
                 $best = null;
                 foreach ($mentions as [$name, $end, $start]) {

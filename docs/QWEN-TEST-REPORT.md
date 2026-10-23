@@ -2,12 +2,12 @@
 
 Ngày: 2026-10-23 · Nhánh `feat/qwen-local-no-paid-api` · PR #1
 
-## Tóm tắt (lần chạy model thật mới nhất: lần 11, run 39920519362, commit 5a0620a — PASS)
+## Tóm tắt (lần chạy model thật mới nhất: lần 13, run 39950921303, commit f66e118 — PASS)
 
 | Kiểm thử | Kết quả |
 |---|---|
-| 4 bài VI/EN, Qwen3-0.6B thật, CPU (Node + onnxruntime-node), mã điều phối của plugin, QA 0.3.0 | 1.480–1.738 từ, 7–8 H2, **QA 75–100**, 254–375 giây/bài |
-| 1 bài VI trong Chromium qua giao diện plugin thật (WASM q4, không GPU) → lưu nháp WordPress | **1.754 từ, 27,5 phút, nháp #5, QA 80**, tải lại model từ cache 0,04 phút |
+| 4 bài VI/EN, Qwen3-0.6B thật, CPU (Node + onnxruntime-node), mã điều phối của plugin, QA 0.3.0 | 1.520–1.600 từ, 6–8 H2, **QA 80–100**, 90–139 giây/bài |
+| 1 bài VI trong Chromium qua giao diện plugin thật (WASM q4, không GPU) → lưu nháp WordPress | **1.630 từ, 17,7 phút, nháp #5, QA 85**, tải lại model từ cache 0,04 phút |
 | Máy chủ trình duyệt liên hệ | chỉ `huggingface.co`, `us.aws.cdn.hf.co`, `secure.gravatar.com` (WordPress) |
 | Plugin trên WordPress sạch 6.9.10/PHP 8.1, 7.1.3/PHP 8.3 và 7.1.3/PHP 8.3 + WooCommerce/Yoast/Rank Math (MySQL 8, cùng plugin cũ 1.2.0) | tích hợp 66/66 (68/68 khi có Yoast + Rank Math), E2E 59/59, nâng/hạ phiên bản, gỡ cài đặt giữ bài |
 
@@ -156,7 +156,15 @@ Bài vi-brief có lỗi thật: "Trong thị trấn Hà Nội…" (−10), hứa
 đặt cọc" của brief (−15), 3 câu "tôi đã…" bịa trải nghiệm (−10), 2 câu mua/thuê (−5; một câu là báo nhầm: "không bắt buộc phải mua
 xe" nói đúng). Câu bịa "tôi đã…" xuất hiện ở các lần 9, 10, 12 dù prompt đã cấm, nên bước làm sạch nay **bỏ hẳn** câu kể trải
 nghiệm ngôi thứ nhất và câu hứa miễn cọc không có trong brief, sửa "thị trấn Hà Nội/Long Biên"; QA vẫn chấm phần còn lại với
-ngưỡng 70 không đổi. Kết quả cho mã mới được ghi ở mục kế tiếp sau khi chạy model thật.
+ngưỡng 70 không đổi. Chromium/WASM (cùng lần chạy): 1.724 từ, 29,5 phút, nháp #5, QA 85.
+
+### 2.14 Lần chạy 13 (run 39950921303, commit f66e118 — làm sạch câu bịa) — PASS
+CPU: vi-brief 1.577 / QA 95 (1 câu so sánh "việc mua xe … nhưng việc thuê lại tốt hơn"); en-brief 1.600 / 80 — trừ 15 vì
+"Honda Air Blade 200,000 VND/day, which provides a 3 million VND deposit", câu này **đúng brief**: QA tính "3 million" là giá vì
+chữ "deposit" đứng sau số tiền (**báo nhầm**, sửa ở commit kế tiếp — lỗi #15); 1 câu "buying a motorbike involves more paperwork";
+vi-general 1.520 / 100; en-general 1.555 / 100. Không còn câu "tôi đã…" hay hứa miễn cọc nào bị đánh dấu.
+Chromium/WASM: **1.630 từ, 17,7 phút**, 2,1 token/s, 9 lần gọi, nháp #5, **QA 85**: 3 câu "người mua" (lỗi thật), thiếu nguyên văn
+từ khóa. Tải lại từ cache 0,04 phút.
 
 ### 2.8 0.3.0-beta: chấm lại bài thật bằng QA mới (kiểm chứng dữ kiện + SEO)
 Cùng các bài gốc trong `docs/qwen-samples/`, cùng brief như CI, chấm bằng QA 0.3.0 (không chạy lại model):
@@ -177,7 +185,7 @@ Lần chạy model thật cho commit 0.3.0-beta cuối (prompt "THUÊ, không ph
 
 | Bộ kiểm thử | Kết quả cục bộ |
 |---|---|
-| `php tests/quality.php` (QA, gồm câu và bài thật bị lỗi) | 69/69 |
+| `php tests/quality.php` (QA, gồm câu và bài thật bị lỗi) | 72/72 |
 | `php tests/markdown.php` (Markdown → block) | 18/18 |
 | `node --test tests/js/*.test.mjs` (điều phối, Worker, lỗi thật của Qwen) | 30/30 |
 | `wp eval-file tests/wp-integration.php` (WP 7.1.3 + SQLite, cùng plugin cũ 1.2.0) | 66/66 (CI có Yoast + Rank Math: 68/68) |

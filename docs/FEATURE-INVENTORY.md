@@ -43,7 +43,7 @@ Cách đọc cột **Tested**:
 | Không ghi đè bài đã rời Nháp, bài không do plugin tạo, bài của người khác | yes (người khác: 0.3.0) | REAL WP | DONE | mã `not_draft`, 404, `not_owner` |
 | Markdown → block H2–H3/đoạn/danh sách, không H1, escape, `wp_kses_post` | yes | UNIT + REAL WP + E2E | DONE | `markdown.php` (18); block editor xác nhận mọi block hợp lệ |
 | Danh mục (kiểm tra `assign_term`) | yes | REAL WP | DONE | `wp-integration.php` |
-| QA kỹ thuật (ngưỡng 70) | yes | UNIT + REAL MODEL | DONE | `quality.php` (69); bài thật QA 40–100 (lần 9 không đạt — đúng), lần 10–11 QA 75–100 |
+| QA kỹ thuật (ngưỡng 70) | yes | UNIT + REAL MODEL | DONE | `quality.php` (72); bài thật QA 40–100 (lần 9 không đạt — đúng), lần 10–11 và 13 QA 75–100 |
 | Kiểm chứng dữ kiện (giá lệch brief theo mẫu xe, xe xăng gọi là xe điện, địa lý Hà Nội, mua/thuê, không cần cọc, khẳng định, đánh giá, nguồn, năm, trải nghiệm) | yes (0.3.0) | UNIT (câu thật) + REAL MODEL (lần 8–11) | PARTIAL | lần 11 bắt được giá Vision/Wave tráo, giá và link bịa; chỉ bắt mẫu sai đã biết; không thay được người kiểm chứng |
 | SEO: từ khóa, H2 nhồi từ khóa, độ dài tiêu đề, trùng tiêu đề/nội dung với bài đã có | yes (0.3.0) | UNIT + REAL WP | DONE | `Ajax::similar_posts`; tích hợp "copying an existing post is flagged" |
 | Biên tập (con người): ô xác nhận trong trình soạn bài, tự bỏ khi Qwen viết lại | yes (0.3.0) | REAL WP + E2E (block editor) | DONE | `save_editorial_review`; E2E "editorial sign-off is saved from the block editor metabox" |
