@@ -1,0 +1,17 @@
+<!doctype html><meta charset="utf-8"><title>probe</title><pre id="out"></pre>
+<script type="module">
+const out = document.getElementById('out');
+window.runProbe = (device, dtype) => new Promise((resolve) => {
+  const w = new Worker('./worker.js', { type: 'module' });
+  const t0 = performance.now();
+  w.onmessage = ({ data }) => {
+    if (data.type === 'progress') return;
+    data.secs = (performance.now() - t0) / 1000;
+    data.isolated = self.crossOriginIsolated;
+    out.textContent += JSON.stringify(data) + '\n';
+    if (data.type === 'done' || data.type === 'error') { w.terminate(); resolve(data); }
+  };
+  w.onerror = (e) => resolve({ type: 'error', error: 'worker onerror ' + e.message });
+  w.postMessage({ device, dtype });
+});
+</script>
