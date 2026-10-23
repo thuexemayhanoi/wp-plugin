@@ -295,8 +295,13 @@ export function cleanPart(text, { heading = '', others = [], allowSubheadings = 
   if (value && !SENTENCE_END_RE.test(value)) {
     const rows = value.split('\n');
     const last = rows.at(-1);
-    // List items and subheadings may legitimately end without punctuation.
-    if (!/^\s*(?:[-*]|\d+[.)]|###)\s/.test(last)) {
+    // A list item cut off by the token limit ends with a comma, dash or conjunction.
+    if (/^\s*(?:[-*]|\d+[.)])\s/.test(last) && /(?:[,;:–-]|\s(?:và|hoặc|với|and|or|with))\s*$/iu.test(last)) {
+      rows.pop();
+      value = rows.join('\n').trim();
+      warnings.push('truncated');
+    } else if (!/^\s*(?:[-*]|\d+[.)]|###)\s/.test(last)) {
+      // List items and subheadings may legitimately end without punctuation.
       const end = Math.max(last.lastIndexOf('. '), last.lastIndexOf('! '), last.lastIndexOf('? '), last.lastIndexOf('… '));
       if (end > 0) {
         rows[rows.length - 1] = last.slice(0, end + 1);

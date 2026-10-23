@@ -131,6 +131,10 @@ test('real Qwen3-0.6B artefacts, run 39898298326: "7th Section:" headings, chatb
   assert.equal(closing.text, 'Remember, safety is the priority.');
   assert.ok(closing.warnings.includes('chatbot'));
   assert.equal(cleanPart('Hãy kiểm tra xe thường xuyên. Nếu bạn có câu hỏi, hãy hỏi tôi nhé.').text, 'Hãy kiểm tra xe thường xuyên.');
+  // Browser run: a list item cut off by the token limit.
+  const list = cleanPart('Thông tin thêm:\n\n- Mở cửa từ 09:00 đến 21:00 hàng ngày.\n- Honda Vision 200.000đ/ngày, cọc 4–5 triệu và Honda Wave 150.000đ/ngày,');
+  assert.ok(list.text.endsWith('hàng ngày.') && list.warnings.includes('truncated'), list.text);
+  assert.equal(cleanPart('- Mũ bảo hiểm\n- Áo mưa').text, '- Mũ bảo hiểm\n- Áo mưa');
 });
 
 test('writeArticle produces ~1,500 words with 7 H2 sections and a conclusion', async () => {

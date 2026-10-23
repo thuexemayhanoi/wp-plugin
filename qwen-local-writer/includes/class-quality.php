@@ -216,6 +216,8 @@ final class Quality {
             '/\d+(?:[.,]\d+)?\s?%/u',
             '/https?:\/\/[^\s)\]]+|www\.[^\s)\]]+/iu',
             '/[\w.+-]+@[\w-]+\.[\w.-]+/u',
+            // Long bare numbers (ids, timestamps, account numbers) copied or invented by the model.
+            '/(?<![\p{N}.,])\d{9,}(?![\p{N}])/u',
         ];
         $digits = static function (string $s): string {
             $d = preg_replace('/\D+/', '', $s);
@@ -240,6 +242,7 @@ final class Quality {
                 }
             }
         }
-        return array_keys($found);
+        // array_keys() turns numeric-string keys into ints; keep every value a string.
+        return array_map('strval', array_keys($found));
     }
 }

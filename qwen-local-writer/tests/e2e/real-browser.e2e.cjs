@@ -19,9 +19,10 @@ const wp = cmd => execSync(`${process.env.WP_CLI} ${cmd}`, { encoding: 'utf8' })
 fs.mkdirSync(OUT, { recursive: true });
 
 const SAMPLE = LANGUAGE === 'vi'
-  ? { title: `Thuê xe máy ở Long Biên: lưu ý trước khi nhận xe (${Date.now()})`, keyword: 'thuê xe máy Long Biên',
+  // No timestamp in titles: in run 39898298326 the model copied such a number into the article.
+  ? { title: 'Thuê xe máy ở Long Biên: lưu ý trước khi nhận xe', keyword: 'thuê xe máy Long Biên',
       facts: 'Cho Thuê Xe Máy Nguyễn Tú, 112 Nguyễn Văn Cừ, Bồ Đề, Long Biên, Hà Nội. Điện thoại/Zalo: 0942 467 674. Mở cửa 09:00–21:00 hằng ngày. Honda Vision 200.000đ/ngày, cọc 4–5 triệu. Honda Wave 150.000đ/ngày, cọc 2–3 triệu. Giá tham khảo, cần xác nhận trước khi đặt.' }
-  : { title: `Renting a Scooter in Long Bien, Hanoi: What to Check (${Date.now()})`, keyword: 'renting a scooter in Hanoi',
+  : { title: 'Renting a Scooter in Long Bien, Hanoi: What to Check', keyword: 'renting a scooter in Hanoi',
       facts: 'Nguyen Tu Motorbike Rental, 112 Nguyen Van Cu, Bo De, Long Bien, Hanoi. Phone/Zalo: +84 942 467 674. Open 09:00–21:00 daily. Honda Vision 200,000 VND/day, deposit 4–5 million VND. Prices are references and must be confirmed.' };
 
 let failures = 0;
@@ -103,7 +104,8 @@ const minutes = ms => Math.round(ms / 600) / 100;
   const after = hosts.get('huggingface.co') || 0;
   check(/sẵn sàng/.test(await page.textContent('#qlw-model-status')), `reload uses the browser cache (${minutes(cachedMs)} min, ${after - before} new huggingface.co requests)`);
 
-  const allowed = /^(?:huggingface\.co|[a-z0-9-]+\.hf\.co|cdn-lfs[a-z0-9.-]*\.huggingface\.co|cas-bridge\.xethub\.hf\.co|secure\.gravatar\.com)$/;
+  // Hugging Face serves weights from its own CDN hosts (e.g. us.aws.cdn.hf.co); Gravatar is WordPress core's admin bar.
+  const allowed = /^(?:huggingface\.co|(?:[a-z0-9-]+\.)+hf\.co|(?:[a-z0-9-]+\.)+huggingface\.co|secure\.gravatar\.com)$/;
   const unexpected = [...hosts.keys()].filter(h => !allowed.test(h));
   check(unexpected.length === 0, `only model-hub hosts were contacted: ${JSON.stringify(Object.fromEntries(hosts))}`);
 

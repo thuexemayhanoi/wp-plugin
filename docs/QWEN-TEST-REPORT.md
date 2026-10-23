@@ -42,14 +42,29 @@ câu kiểu chatbot ở cuối bài EN. Kết luận: plugin tạo được **b�
 nhưng **không đủ chất lượng để đăng nếu không biên tập kỹ**. Sau lần chạy này đã bổ sung: bỏ tiền tố "7th Section:"/
 "Ghi chú:" trong tiêu đề, xoá câu chatbot ("Let me know…", "hãy hỏi tôi"), loại H2 gần trùng tiêu đề bài.
 
-### 2.3 Chromium qua giao diện plugin (WASM)
-Đang chạy (job 120234142977) — cập nhật khi xong.
+### 2.3 Chromium qua giao diện plugin thật (run 39898298326, job 120234142977, WordPress 7.1.3 + MySQL 8, WASM)
+Luồng thật: đăng nhập wp-admin → trang Qwen Local Writer (cross-origin isolated) → bấm **Tải Qwen** (Worker, Transformers.js
+và ONNX Runtime đóng gói trong plugin, trọng số tải từ Hugging Face revision đã ghim) → viết bài VI có brief → **Lưu nháp**.
+
+| Chỉ số | Kết quả |
+|---|---|
+| Thiết bị | WASM q4, 2 luồng (runner không có GPU; WebGPU chỉ là SwiftShader nên chế độ Tự động bỏ qua đúng) |
+| Khởi tạo model (lần đầu, mạng CI) | 0,17 phút |
+| Viết bài | **28 phút**, 1,2–1,3 token/s, 8 lần gọi model, 2.108 token |
+| Kết quả | **1.599 từ**, 5 H2 + Kết luận, lưu thành **bản nháp WordPress #5**, QA **90/100** (trừ 10: kể trải nghiệm) |
+| Tải lại trang, tải model lần 2 | 0,08 phút — dùng cache trình duyệt |
+| Máy chủ được liên hệ | `huggingface.co`, `us.aws.cdn.hf.co` (CDN của Hugging Face), `secure.gravatar.com` (avatar của WordPress) — không CDN thư viện, không API AI |
+
+Job báo FAIL chỉ vì bộ lọc host của **chính bài kiểm thử** chưa có `us.aws.cdn.hf.co`; đã sửa. Bài viết cũng lộ 2 lỗi đã sửa:
+model chép số `Date.now()` có trong tiêu đề thử nghiệm vào bài (QA nay đánh dấu số dài ≥ 9 chữ số không có trong brief),
+và một gạch đầu dòng bị cắt giữa chừng kết thúc bằng dấu phẩy (nay bị bỏ). Nội dung vẫn có lỗi kiến thức ("thị trấn Long
+Biên", "xe được bán ra") — cần biên tập.
 
 ## 3. Kiểm thử tự động (không dùng model)
 
 | Bộ kiểm thử | Kết quả cục bộ |
 |---|---|
-| `php tests/quality.php` (QA, gồm bài thật bị lỗi) | 26/26 |
+| `php tests/quality.php` (QA, gồm bài thật bị lỗi) | 27/27 |
 | `php tests/markdown.php` (Markdown → block) | 18/18 |
 | `node --test tests/js/*.test.mjs` (điều phối, Worker, lỗi thật của Qwen) | 21/21 |
 | `wp eval-file tests/wp-integration.php` (WP 7.1.3 + SQLite, cùng plugin cũ 1.2.0) | 49/49 |
