@@ -85,4 +85,14 @@ check($kw_missing['score'] === $long['score'] - 5 && $kw_ok['score'] === $long['
 $think = Quality::assess(vi_article(8, 7, '<think>suy nghĩ</think>'), 1500, 'vi');
 check($think['score'] < $long['score'], 'leftover <think> tags are penalised');
 
+// Real Qwen3-0.6B output from CI run 39897057193 (before the 0.2.0 prompt/cleanup fixes):
+// "*H2:" headings, sections written into each other, meta sentences about the conclusion.
+$real_brief = 'Cho Thuê Xe Máy Nguyễn Tú. Địa chỉ: 112 Nguyễn Văn Cừ, Bồ Đề, Long Biên, Hà Nội. Honda Air Blade 200.000đ/ngày, cọc 3 triệu. Honda Vision cọc 4–5 triệu. Xe tay ga 50cc 200.000đ/ngày, cọc 4 triệu. Tiền cọc từ 2.000.000đ đến 5.000.000đ.';
+$real = Quality::assess(file_get_contents(__DIR__ . '/fixtures/qwen-real-vi-v020-flawed.md'), 1500, 'vi', $real_brief, 'thuê xe máy ở Hà Nội');
+$failed = array_column(array_filter($real['checks'], static fn ($c) => !$c['pass']), 'id');
+check(!$real['ready_for_review'], 'flawed real Qwen article is NOT ready for review (score ' . $real['score'] . ')');
+check(in_array('heading-format', $failed, true) && in_array('bleed', $failed, true) && in_array('meta', $failed, true), 'flags heading artefacts, section bleed and meta text: ' . implode(',', $failed));
+$dup = Quality::assess(vi_article() . "\n\n## Phần 1: lưu ý về giấy tờ\n\n" . str_repeat('Một câu mới khác biệt hoàn toàn để đủ độ dài cho phần này. ', 8), 1500, 'vi');
+check(in_array('dup-heading', array_column(array_filter($dup['checks'], static fn ($c) => !$c['pass']), 'id'), true), 'duplicate H2 headings are flagged');
+
 finish('Quality');

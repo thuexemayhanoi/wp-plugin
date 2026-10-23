@@ -87,10 +87,8 @@ async function loadRuntime() {
     mjs: new URL('onnxruntime-web/ort-wasm-simd-threaded.asyncify.mjs', VENDOR).href,
     wasm: new URL('onnxruntime-web/ort-wasm-simd-threaded.asyncify.wasm', VENDOR).href,
   };
-  // ONNX Runtime defaults to half the cores (max 4); leave one core for the page instead.
-  if (globalThis.crossOriginIsolated) {
-    env.backends.onnx.wasm.numThreads = Math.max(1, Math.min(8, (globalThis.navigator?.hardwareConcurrency || 2) - 1));
-  }
+  // numThreads stays at ONNX Runtime's default (half the logical cores, max 4): measured in CI,
+  // 3 threads on a 4-vCPU/2-core runner ran at ~1.5 token/s versus ~2.6 with the default 2.
   return runtime;
 }
 

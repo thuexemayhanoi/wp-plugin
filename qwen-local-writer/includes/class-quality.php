@@ -16,6 +16,22 @@ final class Quality {
     private const FOREIGN_RE = '/[\p{Han}\p{Hiragana}\p{Katakana}\p{Hangul}\p{Cyrillic}\p{Thai}\p{Arabic}]/u';
     private const UNSAFE_RE = '/<\s*(?:script|iframe|style|form|svg|object|embed)\b|<\?php|javascript\s*:|\bon[a-z]+\s*=\s*["\']/iu';
 
+    /** Mirrors META_LINE_RE in assets/qlw-core.js. */
+    private const META_RE = '/^(?:đoạn|phần)\s+(?:văn|mở bài|mở đầu|giới thiệu|kết luận|kết|này|tiếp theo)\b.{0,160}\b(?:như sau|sau đây|tóm tắt|nhấn mạnh|gồm có|sẽ (?:giới thiệu|trình bày|nói))\b|(?:có thể|được|sẽ) (?:được )?viết (?:lại )?như sau\s*[:：]?\s*$|^\(?\s*(?:[^()\n]{0,40}\s)?\d+\s*(?:từ|words?)\b[^()\n]{0,30}\)?\.?$|^(?:đề xuất|gợi ý)\s+thêm\s+(?:một\s+)?danh sách|^(?:this|the)\s+(?:section|paragraph|introduction|conclusion|article)\s+(?:will|should|can|summari[sz]es|highlights)\b|^(?:here is|here\'s|below is|sure[,!])\b|^(?:word count|note)\s*[:：]/iu';
+
+    public static function strip_markers(string $line): string {
+        $value = str_replace(['**', '__', '`'], '', $line);
+        do {
+            $previous = $value;
+            $value = preg_replace(['/^\s*(?:#{1,6}|[-*+•>]|\(?\d{1,2}[.):]|\(?[ivx]{1,4}[.)])\s*/iu', '/^\s*(?:h[1-6]|tiêu đề|heading|title)\s*[:.-]\s*/iu', '/^\s*(?:phần|mục|section|part)\s+\d+\s*[:.-]\s*/iu'], '', $value);
+        } while ($value !== $previous);
+        return trim(rtrim($value, '*_'));
+    }
+
+    public static function key(string $text): string {
+        return trim(preg_replace('/\s+/u', ' ', preg_replace('/[^\p{L}\p{N} ]/u', ' ', mb_strtolower(self::strip_markers($text)))));
+    }
+
     public static function words(string $text): array {
         preg_match_all(self::WORD_RE, $text, $m);
         return $m[0];
@@ -64,6 +80,44 @@ final class Quality {
             }
         }
         $check('thin-sections', $thin === 0, min(15, 5 * $thin), $thin ? sprintf('%d phần H2 có dưới 60 từ.', $thin) : 'Mỗi phần H2 có nội dung.');
+
+        // Model artifacts in headings, repeated headings, and sections bleeding into each other.
+        preg_match_all('/^(#{2,3})\s+(.+)$/mu', $markdown, $hm);
+        $bad_headings = array_filter($hm[2], static fn (string $h): bool => (bool) preg_match('/\*|_{2}|\bH[1-6]\s*[:.-]|[:：]\s*$/u', $h));
+        $check('heading-format', !$bad_headings, 10, $bad_headings ? 'Tiêu đề còn ký tự rác của model (*, "H2:", dấu hai chấm cuối): ' . implode(' | ', array_slice($bad_headings, 0, 3)) : 'Tiêu đề sạch.');
+        $heading_keys = array_map([self::class, 'key'], $hm[2]);
+        $dup_headings = count($heading_keys) - count(array_unique($heading_keys));
+        $check('dup-heading', $dup_headings === 0, 10, $dup_headings ? sprintf('%d tiêu đề bị lặp.', $dup_headings) : 'Không lặp tiêu đề.');
+        $h2_keys = [];
+        foreach ($hm[1] as $i => $level) {
+            if ($level === '##' && mb_strlen($heading_keys[$i]) >= 12) {
+                $h2_keys[] = $heading_keys[$i];
+            }
+        }
+        $bleed = 0;
+        $meta = 0;
+        foreach (preg_split('/\R/u', $markdown) ?: [] as $line) {
+            $line = trim($line);
+            if ($line === '' || preg_match('/^#{1,6}\s/u', $line)) {
+                continue;
+            }
+            $plain = self::strip_markers($line);
+            if (preg_match(self::META_RE, $plain)) {
+                $meta++;
+            }
+            $pseudo = preg_match('/^(?:\d{1,2}[.)]\s+)?\*\*[^*]{3,120}\*\*\s*[:：]?$|^\**\s*H[1-6]\s*[:.-]/iu', $line);
+            if ($pseudo) {
+                $key = self::key($plain);
+                foreach ($h2_keys as $h) {
+                    if ($key === $h || (mb_strlen($key) >= 12 && (str_contains($key, $h) || str_contains($h, $key)))) {
+                        $bleed++;
+                        break;
+                    }
+                }
+            }
+        }
+        $check('bleed', $bleed === 0, 15, $bleed ? sprintf('%d dòng lặp lại tiêu đề mục khác trong thân bài (các mục bị trộn lẫn).', $bleed) : 'Các mục không bị trộn lẫn.');
+        $check('meta', $meta === 0, 15, $meta ? sprintf('%d câu model tự mô tả việc viết ("đoạn kết luận có thể viết như sau", "(… từ)", "here is…") cần xóa.', $meta) : 'Không có câu mô tả yêu cầu/số từ.');
 
         // 3. Safety and leftovers.
         $check('safe', !self::is_unsafe($markdown), 70, 'Không có HTML/mã nguy hiểm.');

@@ -39,9 +39,9 @@ export async function pipeline(task, model, opts = {}) {
   const generator = async (messages, gen) => {
     call++;
     const prompt = messages.at(-1).content;
-    const lang = /Article:|Create an outline|Write the body|Write an introduction|Write a conclusion|Continue it/.test(prompt) ? 'en' : 'vi';
+    const lang = /^Article: /m.test(prompt) ? 'en' : 'vi';
     let text;
-    if (/Lập dàn ý|Create an outline/.test(prompt)) {
+    if (/Liệt kê \d+ tiêu đề|List \d+ section titles/.test(prompt)) {
       text = lang === 'en'
         ? 'Here are the section titles:\n1. **Choosing the right motorbike type**\n2. Documents to prepare before renting\n3. Understanding deposits and contracts\n4. Inspecting the bike at pickup\n5. Riding safely in city traffic\n6. Parking, fuel and daily care\n7. Returning the bike without disputes'
         : 'Dưới đây là 7 tiêu đề:\n1. **Chọn loại xe máy phù hợp nhu cầu**\n2. Giấy tờ cần chuẩn bị khi thuê xe\n3. Hiểu rõ đặt cọc và hợp đồng thuê\n4. Kiểm tra xe kỹ khi nhận bàn giao\n5. Lái xe an toàn trong nội thành\n6. Gửi xe, đổ xăng và bảo quản hằng ngày\n7. Trả xe đúng hẹn, tránh phát sinh';
