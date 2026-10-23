@@ -116,6 +116,18 @@ tải lại từ cache 5 giây, chỉ liên hệ Hugging Face + gravatar. Lỗi 
 tiền tố từ khóa dạng biến thể ("Thuê xe máy:", "Thuê xe máy tại Long Biên:"), tiêu đề bài lặp ở đầu một mục, câu dẫn
 "Bài viết "…" bắt đầu bằng nội dung này:" và "Đoạn văn này đưa ra…". Nội dung vẫn lẫn "mua xe/người mua".
 
+### 2.9 Lần chạy 8 (run 39913479875, commit 060f29b — QA 0.3.0) — PASS
+CPU: vi-brief 1.669 từ / QA 80 (bắt được 2 lỗi thật: "xe điện như Honda Vision", "thị trấn Hà Nội"); en-brief 1.432 / 100;
+vi-general 1.655 / 100; en-general 1.527 / 95. Chromium/WASM: **1.664 từ, 17,5 phút** (2,1 token/s trên runner này), nháp #5,
+QA 80 — 7 câu "người mua/mua xe" và 2 câu "nổi tiếng" được liệt kê cần kiểm chứng; dòng "THUÊ, không phải mua bán" trong prompt
+**không** đủ để model 0.6B bỏ lỗi này.
+
+### 2.10 Lần chạy 9 (run 39914553591, commit 97af80d) — FAIL (đúng)
+CPU: vi-brief **1.675 từ / QA 40 → không đạt**; en-brief 1.544 / 85; vi-general 1.561 / 100; en-general 1.543 / 100.
+Bài vi-brief có giá rác "000000000đ/ngày", "Honda Vision 150.000đ/ngày" (brief: 200.000đ), 4 câu "tôi đã…/chúng tôi đã…".
+QA chặn đúng; nhưng 3 cảnh báo mua/thuê là **báo nhầm** (câu "không phải mua xe mà là thuê" nói đúng) và một cảnh báo giá EN là
+báo nhầm ("deposits" số nhiều). Đã sửa hai lỗi của QA và thêm luật bỏ câu có số toàn 0; ngưỡng 70 giữ nguyên.
+
 ### 2.8 0.3.0-beta: chấm lại bài thật bằng QA mới (kiểm chứng dữ kiện + SEO)
 Cùng các bài gốc trong `docs/qwen-samples/`, cùng brief như CI, chấm bằng QA 0.3.0 (không chạy lại model):
 
@@ -135,10 +147,10 @@ Lần chạy model thật cho commit 0.3.0-beta cuối (prompt "THUÊ, không ph
 
 | Bộ kiểm thử | Kết quả cục bộ |
 |---|---|
-| `php tests/quality.php` (QA, gồm câu và bài thật bị lỗi) | 57/57 |
+| `php tests/quality.php` (QA, gồm câu và bài thật bị lỗi) | 60/60 |
 | `php tests/markdown.php` (Markdown → block) | 18/18 |
-| `node --test tests/js/*.test.mjs` (điều phối, Worker, lỗi thật của Qwen) | 28/28 |
-| `wp eval-file tests/wp-integration.php` (WP 7.1.3 + SQLite, cùng plugin cũ 1.2.0) | 66/66 |
+| `node --test tests/js/*.test.mjs` (điều phối, Worker, lỗi thật của Qwen) | 29/29 |
+| `wp eval-file tests/wp-integration.php` (WP 7.1.3 + SQLite, cùng plugin cũ 1.2.0) | 66/66 (CI có Yoast + Rank Math: 68/68) |
 | `tests/rollback.sh` (0.3.0-beta ↔ 0.2.0-beta, dữ liệu giữ nguyên) | PASS |
 | `tests/e2e/admin-ui.e2e.cjs` (Chromium, model giả, cùng plugin cũ) | 59/59 |
-| Smoke plugin cũ `tests/smoke-v120.php` | 28/28 |
+| Smoke plugin cũ `tests/smoke-v120.php` | 29/29 |

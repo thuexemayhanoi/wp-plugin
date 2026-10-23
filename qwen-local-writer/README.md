@@ -142,7 +142,7 @@ bắt được những mẫu sai đã biết và các con số không có trong 
 - Qwen3-0.6B viết tiếng Việt/tiếng Anh trôi chảy vừa phải nhưng hay chung chung, đôi khi sai kiến thức (địa danh, loại
   xe, mua/thuê), có thể lặp ý hoặc lệch chủ đề. QA chỉ đánh dấu các mẫu sai đã biết; các sai sót khác phải do người
   biên tập phát hiện.
-- Kiểm tra trùng nội dung chỉ so với tối đa 20 bài tìm được bằng tìm kiếm WordPress (từ khóa/tiêu đề), không phải toàn
+- Kiểm tra trùng nội dung chỉ so với tối đa 40 bài tìm được bằng tìm kiếm WordPress (từ khóa, tiêu đề và 2 cụm câu nguyên văn của bài), không phải toàn
   bộ website.
 - Cần giữ tab mở; không có chạy nền phía máy chủ, không có viết hàng loạt/Excel trong plugin này.
 - iPhone/iPad: giao diện dùng được (đã kiểm tra bố cục), nhưng Safari có thể đóng tab khi tải model ~0,6–0,9 GB.
@@ -153,9 +153,9 @@ bắt được những mẫu sai đã biết và các con số không có trong 
 
 ```bash
 python3 scripts/vendor_qwen_deps.py            # lấy runtime từ npm, kiểm tra hash
-php qwen-local-writer/tests/quality.php        # QA (57 kiểm tra, dựng từ lỗi thật của Qwen)
+php qwen-local-writer/tests/quality.php        # QA (60 kiểm tra, dựng từ lỗi thật của Qwen)
 php qwen-local-writer/tests/markdown.php       # Markdown → block an toàn (18)
-node --test qwen-local-writer/tests/js/*.test.mjs   # điều phối bài viết + Worker + lỗi thật của Qwen (28)
+node --test qwen-local-writer/tests/js/*.test.mjs   # điều phối bài viết + Worker + lỗi thật của Qwen (29)
 python3 scripts/build_qwen.py                  # dist/qwen-local-writer.zip
 wp eval-file qwen-local-writer/tests/wp-integration.php   # trên WordPress dùng-một-lần (66)
 WP_URL=… WP_CLI="wp --path=…" node qwen-local-writer/tests/e2e/admin-ui.e2e.cjs   # Chromium, model giả (59)

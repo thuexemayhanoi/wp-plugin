@@ -234,7 +234,18 @@ final class Quality {
             : 'Không thấy mẫu sai địa lý Hà Nội đã biết.');
 
         if (self::is_rental($title . ' ' . $keyword)) {
-            $buy = self::matching($sentences, static fn (string $s): bool => (bool) preg_match('/' . self::WB . '(?:(?:mua|bán)\s+xe|người\s+mua|đặt\s+mua|giá\s+bán|trả\s+góp|buy(?:ing)?\s+(?:a\s+|the\s+|your\s+)?(?:new\s+|used\s+)?(?:bike|motorbike|scooter|motorcycle)|purchas(?:e|ing)\s+(?:a\s+|the\s+)?(?:bike|motorbike|scooter|motorcycle)|buyers?)' . self::WE . '/iu', $s));
+            $buy = self::matching($sentences, static function (string $s): bool {
+                preg_match_all('/' . self::WB . '(?:(?:mua|bán)\s+xe|người\s+mua|đặt\s+mua|giá\s+bán|trả\s+góp|buy(?:ing)?\s+(?:a\s+|the\s+|your\s+)?(?:new\s+|used\s+)?(?:bike|motorbike|scooter|motorcycle)|purchas(?:e|ing)\s+(?:a\s+|the\s+)?(?:bike|motorbike|scooter|motorcycle)|buyers?)' . self::WE . '/iu', $s, $m, PREG_OFFSET_CAPTURE);
+                foreach ($m[0] as [$text, $offset]) {
+                    // "không phải mua xe mà là thuê", "instead of buying a bike" state the difference correctly (run 39914553591).
+                    // Last 16 characters before the match (byte slicing could split a Vietnamese letter).
+                    $before = mb_substr(substr($s, 0, $offset), -16);
+                    if (!preg_match('/' . self::WB . '(?:không|chẳng|thay\s+vì|instead\s+of|rather\s+than|not|no\s+need|without)' . self::WE . '/iu', $before)) {
+                        return true;
+                    }
+                }
+                return false;
+            });
             $flag('rent-buy', array_slice($buy, 0, 3), 'Bài về THUÊ xe nhưng câu nói về mua/bán xe.');
             $check('factual', 'rent-buy', !$buy, count($buy) >= 3 ? 10 : 5, $buy
                 ? sprintf('%d câu lẫn mua/bán xe trong bài về thuê xe.', count($buy))
@@ -549,7 +560,7 @@ final class Quality {
                     continue;
                 }
                 $between = substr($lower, $best[1], $offset - $best[1]);
-                if (preg_match('/' . self::WB . '(?:cọc|deposit)' . self::WE . '/iu', $between)) {
+                if (preg_match('/' . self::WB . '(?:cọc|deposits?)' . self::WE . '/iu', $between)) {
                     continue;
                 }
                 $known = false;

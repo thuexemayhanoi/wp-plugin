@@ -32,8 +32,8 @@ Cách đọc cột **Tested**:
 | Xoá cache model | yes | E2E (fake) | PARTIAL | `clearCache()`; xoá cache thật chưa đo |
 | Giải phóng bộ nhớ (unload + terminate Worker), tải lại | yes (0.3.0) | E2E | DONE | nút `#qlw-unload`; E2E "Qwen loads again after freeing memory" |
 | Viết theo phần: dàn ý → mở bài → 7 H2 (+H3) → kết luận, ~1.500 từ | yes | REAL MODEL | DONE | `writeArticle`; 6 lần chạy thật: 1.403–1.733 từ (CPU), 1.599–1.716 từ (Chromium) |
-| Làm sạch: lặp câu/đoạn, chữ Hán, câu chatbot/meta, mục trộn lẫn, phần bị cắt, heading rác, tiền tố từ khóa H2, dòng nhắc tiêu đề | yes | UNIT (từ đầu ra thật) + REAL MODEL | DONE | `cleanPart/parseOutline/dropRepeats`; `core.test.mjs` (28) |
-| Prompt bài thuê xe: "THUÊ, không phải mua bán" | yes (0.3.0) | UNIT | PARTIAL | `contextBlock`; hiệu quả trên model thật chờ lần chạy CI của commit cuối |
+| Làm sạch: lặp câu/đoạn, chữ Hán, câu chatbot/meta, mục trộn lẫn, phần bị cắt, heading rác, tiền tố từ khóa H2, dòng nhắc tiêu đề | yes | UNIT (từ đầu ra thật) + REAL MODEL | DONE | `cleanPart/parseOutline/dropRepeats`; `core.test.mjs` (29) |
+| Prompt bài thuê xe: "THUÊ, không phải mua bán" | yes (0.3.0) | UNIT + REAL MODEL | PARTIAL | `contextBlock`; lần chạy 8–9: model 0.6B vẫn viết "người mua/mua xe" — QA đánh dấu để người biên tập sửa |
 | Nút Dừng thật sự dừng, giữ bản nháp | yes | UNIT + E2E | DONE | `InterruptableStoppingCriteria`; E2E "stop keeps the partial draft" |
 | Lưu khôi phục trong trình duyệt (cả khi đang stream), khôi phục sau tải lại | yes | E2E | DONE | `persist/persistThrottled`; E2E "reload during writing restores the streamed text" |
 | Worker sập → báo đúng, giữ nội dung | yes (0.3.0) | E2E (crash giả lập) | DONE | mã `WORKER_CRASHED`; E2E "a crashed Worker is reported as a crash" |
@@ -43,16 +43,16 @@ Cách đọc cột **Tested**:
 | Không ghi đè bài đã rời Nháp, bài không do plugin tạo, bài của người khác | yes (người khác: 0.3.0) | REAL WP | DONE | mã `not_draft`, 404, `not_owner` |
 | Markdown → block H2–H3/đoạn/danh sách, không H1, escape, `wp_kses_post` | yes | UNIT + REAL WP + E2E | DONE | `markdown.php` (18); block editor xác nhận mọi block hợp lệ |
 | Danh mục (kiểm tra `assign_term`) | yes | REAL WP | DONE | `wp-integration.php` |
-| QA kỹ thuật (ngưỡng 70) | yes | UNIT + REAL MODEL | DONE | `quality.php` (57); bài thật QA 85–100 |
+| QA kỹ thuật (ngưỡng 70) | yes | UNIT + REAL MODEL | DONE | `quality.php` (60); bài thật QA 85–100 |
 | Kiểm chứng dữ kiện (giá lệch brief theo mẫu xe, xe xăng gọi là xe điện, địa lý Hà Nội, mua/thuê, không cần cọc, khẳng định, đánh giá, nguồn, năm, trải nghiệm) | yes (0.3.0) | UNIT (câu thật) + chấm lại mẫu thật | PARTIAL | chỉ bắt mẫu sai đã biết; không thay được người kiểm chứng |
 | SEO: từ khóa, H2 nhồi từ khóa, độ dài tiêu đề, trùng tiêu đề/nội dung với bài đã có | yes (0.3.0) | UNIT + REAL WP | DONE | `Ajax::similar_posts`; tích hợp "copying an existing post is flagged" |
 | Biên tập (con người): ô xác nhận trong trình soạn bài, tự bỏ khi Qwen viết lại | yes (0.3.0) | REAL WP + E2E (block editor) | DONE | `save_editorial_review`; E2E "editorial sign-off is saved from the block editor metabox" |
 | Dữ kiện đã xác minh của cửa hàng + nút chèn vào brief | yes (0.3.0) | REAL WP + E2E | DONE | cài đặt `verified_facts`; E2E "insert button adds the verified facts" |
-| Từ khóa chính Yoast SEO / Rank Math cho nháp mới (không ghi đè) | yes (0.3.0) | REAL WP (filter) + CI compat | PARTIAL | `focus_keyword_keys`; plugin thật chỉ kiểm thử trong job CI compat |
+| Từ khóa chính Yoast SEO / Rank Math cho nháp mới (không ghi đè) | yes (0.3.0) | REAL WP + CI compat | DONE | `focus_keyword_keys`; CI nhận diện Yoast SEO 28.7 và Rank Math 1.0.280 thật (tích hợp 68/68); ghi meta và không ghi đè kiểm qua filter |
 | Không tải mã Qwen ở frontend công khai | yes | REAL WP + E2E | DONE | tích hợp "public frontend loads no Qwen script"; E2E trang chủ |
 | Quyền + nonce mọi AJAX/cài đặt; subscriber bị chặn; CSRF | yes | REAL WP + E2E | DONE | `Ajax::guard`; 403 cho nonce sai/thiếu/của người khác |
 | Giao diện desktop/iPhone/iPad (bố cục) | yes | E2E (giả lập thiết bị) | PARTIAL | không tràn ngang, ô 16px; **Safari/iOS thật với model: NOT VERIFIED** |
-| Tương thích WooCommerce, Yoast SEO, Rank Math | n/a | CI compat | PARTIAL | job `qwen-wordpress` (compat) — kết quả ghi trong FINAL-AUDIT-REPORT |
+| Tương thích WooCommerce, Yoast SEO, Rank Math | n/a | REAL WP (CI compat) | DONE | WooCommerce 11.2.1 + Yoast SEO 28.7 + Rank Math 1.0.280 cùng bật: tích hợp 68/68, E2E 59/59, rollback, gỡ cài đặt, không PHP Fatal (CI `97af80d`) |
 | Tương thích plugin cũ 1.2.0 cùng kích hoạt | n/a | REAL WP | DONE | CI cài cả hai ZIP; rollback giữ trạng thái plugin cũ |
 | Tự lưu trữ model cùng tên miền | yes | E2E (fake) | PARTIAL | đường dẫn và cấu hình đã kiểm; tải trọng số thật từ thư mục tự lưu trữ chưa thử |
 | Viết hàng loạt / chạy nền máy chủ / tự xuất bản | no | — | NOT IMPLEMENTED (cố ý) | yêu cầu: chỉ nháp, con người biên tập |

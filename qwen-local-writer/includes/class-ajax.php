@@ -79,20 +79,37 @@ final class Ajax {
     /**
      * Existing posts (any status the current user may read) whose title or text is close to the
      * new draft: title word overlap (Jaccard) and the share of the draft's 5-word phrases that
-     * already appear in the post. Read-only; at most 20 candidates found by WordPress search.
+     * already appear in the post. Read-only; at most 40 candidates found by WordPress search
+     * (keyword, title words and two exact phrases from the body).
      *
      * @return list<array{id:int,title:string,status:string,title_similarity:float,content_similarity:float}>
      */
     public static function similar_posts(string $title, string $markdown, int $exclude = 0, string $keyword = ''): array {
         $title_words = array_values(array_filter(Quality::words(Quality::key($title)), static fn (string $w): bool => mb_strlen($w) >= 3));
-        $searches = array_filter(array_unique([trim($keyword), implode(' ', array_slice($title_words, 0, 3))]));
+        $searches = [];
+        foreach (array_filter(array_unique([trim($keyword), implode(' ', array_slice($title_words, 0, 3))])) as $search) {
+            $searches[] = [$search, false];
+        }
+        // Exact 6-word phrases from the body find a copied text even when its title differs and many
+        // other posts share the keyword (a keyword search alone ranks by title first).
+        $lines = array_values(array_filter(Quality::sentences($markdown), static fn (string $s): bool => !preg_match('/[*_`#\[\]<>|]/u', $s) && count(Quality::words($s)) >= 8));
+        foreach (array_unique([$lines[0] ?? '', $lines[intdiv(count($lines), 2)] ?? '']) as $line) {
+            // The phrase must appear verbatim, so take it from the longest punctuation-free stretch.
+            $chunks = preg_split('/[,;:()".!?“”…]+/u', $line) ?: [];
+            usort($chunks, static fn (string $a, string $b): int => count(Quality::words($b)) <=> count(Quality::words($a)));
+            $tokens = preg_split('/\s+/u', trim($chunks[0] ?? '')) ?: [];
+            if (count($tokens) >= 6) {
+                $searches[] = [implode(' ', array_slice($tokens, 0, 6)), true];
+            }
+        }
         $ids = [];
-        foreach ($searches as $search) {
+        foreach ($searches as [$search, $exact]) {
             $query = new \WP_Query([
                 'post_type' => 'post',
                 'post_status' => ['publish', 'future', 'draft', 'pending', 'private'],
                 's' => $search,
-                'posts_per_page' => 20,
+                'sentence' => $exact,
+                'posts_per_page' => $exact ? 10 : 20,
                 'fields' => 'ids',
                 'no_found_rows' => true,
                 'ignore_sticky_posts' => true,
@@ -103,7 +120,7 @@ final class Ajax {
         $draft = self::shingles(mb_substr($markdown, 0, 60000));
         $own_title = array_unique(Quality::words(Quality::key($title)));
         $out = [];
-        foreach (array_slice(array_unique($ids), 0, 20) as $id) {
+        foreach (array_slice(array_unique($ids), 0, 40) as $id) {
             if ($id === $exclude || !current_user_can('read_post', $id)) {
                 continue;
             }

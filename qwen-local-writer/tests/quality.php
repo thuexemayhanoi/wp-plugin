@@ -174,4 +174,13 @@ foreach (['Bài viết **"Thuê xe máy ở Long Biên"** bắt đầu bằng n�
 }
 check(!in_array('meta', $failed_ids(Quality::assess(vi_article(8, 7, "\n\nDưới đây là một vài lưu ý khi nhận xe:\n\n- Kiểm tra phanh"), 1500, 'vi')), true), 'a normal list introduction is not meta');
 
+// Run 39914553591: correct statements of the difference and plural "deposits" are not errors.
+$negated = Quality::assess(vi_article(8, 7, 'Tiết kiệm ngân sách là mục tiêu quan trọng, đặc biệt là khi không phải mua bán xe mà là thuê. Không phải mua xe mới mà là thuê xe, khách hàng sẽ yên tâm.'), 1500, 'vi', '', '', $rental);
+check(!in_array('rent-buy', $failed_ids($negated), true), '"không phải mua xe mà là thuê" is not a rent/buy mix-up');
+$en_brief = "Honda Vision 200,000 VND/day, deposit 4–5 million VND. Honda Air Blade 200,000 VND/day, deposit 3 million VND. A deposit of 2,000,000–5,000,000 VND applies.";
+$plural = Quality::assess(en_article() . "\n\nThe same applies to the Honda Vision 200,000 VND/day and the Honda Air Blade 200,000 VND/day, all with deposits in the range of 2–5 million VND.", 1500, 'en', $en_brief, '', ['title' => 'How to rent a motorbike in Hanoi']);
+check(!in_array('price-mismatch', $failed_ids($plural), true), 'amounts after "deposits" are deposits, not a model price');
+$zeros = Quality::assess(vi_article(8, 7, 'Tôi chọn Honda Wave 150, giá là 000000000đ/ngày.'), 1500, 'vi', $nguyen_tu, '', $rental);
+check(in_array('000000000đ', $zeros['unverified'], true) && in_array('price-mismatch', $failed_ids($zeros), true), 'a garbage "000000000đ" price is flagged');
+
 finish('Quality');

@@ -302,6 +302,13 @@ test('real browser run 39910343866: prefix variants, the article title above a s
   assert.equal(cleanPart(list).text, list);
 });
 
+test('real run 39914553591: a sentence with a garbage "000000000đ" price is dropped', () => {
+  const out = cleanPart('Honda Wave là lựa chọn phổ biến. Đến lúc này, tôi đã chọn Honda Wave 150, giá là 000000000đ/ngày. Hãy xác nhận giá trước khi đặt.');
+  assert.equal(out.text, 'Honda Wave là lựa chọn phổ biến. Hãy xác nhận giá trước khi đặt.');
+  assert.ok(out.warnings.includes('garbage-number'));
+  assert.equal(cleanPart('Honda Vision 200.000đ/ngày, cọc 4–5 triệu.').text, 'Honda Vision 200.000đ/ngày, cọc 4–5 triệu.');
+});
+
 test('rental articles tell the model it is about renting, not buying (real runs wrote "người mua")', () => {
   const rental = normalizeInput({ title: 'Thuê xe máy ở Long Biên: lưu ý trước khi nhận xe' });
   const other = normalizeInput({ title: 'Cách bảo quản xe tay ga trong mùa mưa ở Hà Nội' });

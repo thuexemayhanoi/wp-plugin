@@ -274,6 +274,8 @@ const META_LINE_RE = new RegExp([
   String.raw`^(?:bài viết|article|từ khóa(?: chính)?|main keyword|thông tin|facts)\s*(?:\([^)]*\))?\s*[:：]`,
 ].join('|'), 'iu');
 
+const ZEROS_RE = /(?<![\p{N}.,])0{4,}(?![\p{N}])/u;
+
 const sentenceKey = value => value.toLowerCase().replace(/[^\p{L}\p{N} ]+/gu, ' ').replace(/\s+/g, ' ').trim();
 
 /**
@@ -364,6 +366,14 @@ export function cleanPart(text, { heading = '', title = '', others = [], allowSu
     .replace(/\n{3,}/g, '\n\n')
     .replace(/(?:\n|^)### [^\n]*\s*$/u, '')
     .trim();
+
+  // "giá là 000000000đ/ngày": a run of zeros is never a real figure (run 39914553591); drop that sentence.
+  if (ZEROS_RE.test(value)) {
+    warnings.push('garbage-number');
+    value = value.split('\n')
+      .map(line => ZEROS_RE.test(line) ? line.split(/(?<=[.!?…])\s+/u).filter(sentence => !ZEROS_RE.test(sentence)).join(' ') : line)
+      .join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  }
 
   const foreign = (value.match(FOREIGN_SCRIPT_RE) || []).length;
   if (foreign) {

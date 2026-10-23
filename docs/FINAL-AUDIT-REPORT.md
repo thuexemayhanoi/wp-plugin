@@ -25,7 +25,7 @@
    - năm không có trong brief.
 3. **SEO**:
    - kiểm tra H2 nhồi từ khóa hoặc lặp cùng tiền tố, độ dài tiêu đề, từ khóa trong tiêu đề;
-   - phát hiện bài gần trùng tiêu đề/nội dung trong tối đa 20 bài liên quan;
+   - phát hiện bài gần trùng tiêu đề/nội dung trong tối đa 40 bài liên quan (tìm theo từ khóa, tiêu đề và 2 cụm câu nguyên văn của bài);
    - từ khóa chính Yoast SEO/Rank Math cho nháp mới (không ghi đè).
 4. **Bảo vệ dữ liệu**: không ghi đè bản nháp của người khác (`not_owner`). Xác nhận biên tập tự bỏ khi Qwen viết lại.
 5. **Ổn định và phục hồi**:
@@ -54,11 +54,14 @@
 | 7 | H2 lặp tiền tố từ khóa (cả dạng biến thể), dòng nhắc lại tiêu đề mục/tiêu đề bài, câu dẫn meta mới ("… bắt đầu bằng nội dung này:", "Đoạn văn này đưa ra…") | lần chạy thật 6 và 7 | thấp |
 | 8 | Không có cách giải phóng RAM mà không xóa cache model | audit | thấp |
 | 9 | Plugin cũ: 5 trang quản trị không vào được, trường ngân sách luôn dừng campaign, giới hạn số từ không khớp, `smoke-v110.php` lỗi thời | kiểm kê | ghi nhận — **không sửa** (giữ nguyên 1.2.0 theo yêu cầu) |
+| 10 | QA mới báo nhầm: câu phủ định đúng ("không phải mua xe mà là thuê") bị tính là lẫn mua/thuê; "deposits" số nhiều không được nhận là tiền cọc | lần chạy thật 9 (bài VI QA 40) | trung bình |
+| 11 | Model in giá rác "000000000đ/ngày" | lần chạy thật 9 | thấp |
+| 12 | Kiểm tra trùng nội dung bỏ sót bản sao khi site có nhiều bài cùng từ khóa (chỉ tìm theo từ khóa/tiêu đề) | kiểm thử tích hợp lặp lại trên CSDL >100 bài | trung bình |
 
 ## 4. Lỗi đã sửa
-Đã sửa lỗi 1–8, mỗi lỗi có kiểm thử hồi quy:
-- `tests/quality.php` (57 kiểm tra);
-- `tests/js/core.test.mjs` (28);
+Đã sửa lỗi 1–8, 10, 11 (câu có số toàn 0 bị bỏ khi làm sạch, QA vẫn đánh dấu) và 12 (tìm thêm theo 2 cụm câu nguyên văn), mỗi lỗi có kiểm thử hồi quy:
+- `tests/quality.php` (60 kiểm tra);
+- `tests/js/core.test.mjs` (29);
 - `tests/wp-integration.php` (66);
 - `tests/e2e/admin-ui.e2e.cjs` (59);
 - `tests/rollback.sh`.
@@ -70,9 +73,9 @@ Lỗi 9 thuộc plugin cũ, chỉ được ghi vào tài liệu.
 | Bộ kiểm thử | Kết quả |
 |---|---|
 | `php -l` mọi file PHP của repo | PASS |
-| `php qwen-local-writer/tests/quality.php` | 57/57 PASS |
+| `php qwen-local-writer/tests/quality.php` | 60/60 PASS |
 | `php qwen-local-writer/tests/markdown.php` | 18/18 PASS |
-| `node --test qwen-local-writer/tests/js/*.test.mjs` | 28/28 PASS |
+| `node --test qwen-local-writer/tests/js/*.test.mjs` | 29/29 PASS |
 | `node --check` mọi JS của plugin + `assets/admin.js` | PASS |
 | `wp eval-file tests/wp-integration.php` (WP 7.1.3 + SQLite, cùng plugin cũ) | 66/66 PASS |
 | `tests/e2e/admin-ui.e2e.cjs` (Chromium, model giả) | 59/59 PASS |
@@ -82,11 +85,14 @@ Lỗi 9 thuộc plugin cũ, chỉ được ghi vào tài liệu.
 | `build_qwen.py` / `build_plugin.py` | PASS (ZIP Qwen 19 file, không chứa test, trọng số hay chuỗi CDN/API thương mại của plugin) |
 | Chấm lại 5 bài Qwen thật + fixture bằng QA mới | vi-brief 80 (giá lệch brief, mua/thuê), en-brief 100, vi-general 100, en-general 95, browser 60 (meta, mua/thuê, trải nghiệm), fixture 55 |
 
-Kiểm thử trên GitHub Actions:
-- CI gồm 3 cấu hình WordPress, trong đó có cấu hình WooCommerce/Yoast/Rank Math.
-- Suy luận Qwen thật cho commit cuối.
+Kiểm thử trên GitHub Actions (chi tiết ở mục 8):
 
-Kết quả của cả hai ở mục 8.
+| Kiểm thử | Kết quả |
+|---|---|
+| CI `97af80d` (run 39914553616): PHP 8.1/8.3 lint + unit + build; WP 6.9.10/PHP 8.1; WP 7.1.3/PHP 8.3 | PASS |
+| CI cùng WooCommerce 11.2.1 + Yoast SEO 28.7 + Rank Math 1.0.280 (WP 7.1.3/PHP 8.3) | PASS — tích hợp 68/68 (nhận diện Yoast, Rank Math), E2E 59/59, nâng/hạ phiên bản, gỡ cài đặt giữ 6 bản nháp, không có PHP Fatal |
+| Model thật, lần chạy 8 (`060f29b`, run 39913479875) | **PASS** — CPU: 1.432–1.669 từ, QA 80–100; trình duyệt: 1.664 từ, 17,5 phút, nháp #5, QA 80 |
+| Model thật, lần chạy 9 (`97af80d`, run 39914553591) | **FAIL** ở job CPU: bài VI có brief QA 40 (giá rác "000000000đ", "Honda Vision 150.000đ/ngày" ≠ brief, 4 câu "tôi đã…", 3 câu bị báo nhầm mua/thuê). 3 bài còn lại 85–100 |
 
 ## 6. Giới hạn chưa xử lý (NOT VERIFIED / còn thiếu)
 - **GPU WebGPU thật**: chưa có máy GPU. Chỉ kiểm thử WASM và SwiftShader.
@@ -96,7 +102,7 @@ Kết quả của cả hai ở mục 8.
   - vẫn có câu chung chung hoặc vô nghĩa, và sai kiến thức ngoài các mẫu QA biết;
   - QA chỉ là đầu mối cho người kiểm chứng.
 - **Tốc độ**: WASM trên CPU 4 vCPU cần 24–29 phút mỗi bài, và phải giữ tab mở.
-- **Phạm vi kiểm tra trùng nội dung**: chỉ so với tối đa 20 bài tìm thấy bằng tìm kiếm WordPress.
+- **Phạm vi kiểm tra trùng nội dung**: chỉ so với tối đa 40 bài tìm thấy bằng tìm kiếm WordPress (từ khóa, tiêu đề, 2 cụm câu nguyên văn), không phải toàn bộ website. Chỉ tìm theo từ khóa/tiêu đề thì bỏ sót bản sao trên site có nhiều bài cùng chủ đề (phát hiện khi chạy lại kiểm thử tích hợp trên CSDL có >100 bài) — đã bổ sung tìm cụm câu nguyên văn.
 - **Worker treo không báo lỗi** (trình duyệt tắt tiến trình): không có watchdog. Cách xử lý là tải lại trang; nội dung được khôi phục (đã kiểm thử E2E).
 - **Plugin cũ 1.2.0**: các lỗi ở mục 3 (#9) chưa sửa.
 
@@ -111,4 +117,11 @@ Plugin tạo được bản nháp ~1.500 từ VI/EN đúng cấu trúc và lưu 
 Nên thử trên staging với một máy Chrome có GPU. Nếu chất lượng 0.6B không đủ, chủ website quyết định có thử model lớn hơn (ví dụ Qwen3-1.7B, chậm và nặng hơn) hay không.
 
 ## 8. Commit, CI và Pull Request
-Mục này được cập nhật sau khi GitHub Actions chạy xong cho commit chứa mã của phiên này (xem mô tả PR #1 để biết commit cuối).
+- Nhánh `feat/qwen-local-no-paid-api`, PR #1 (vẫn là bản nháp/Beta, chưa merge, không triển khai production).
+- Các commit của phiên này:
+  - `060f29b`: 0.3.0-beta, QA nhóm, an toàn dữ liệu, CI tương thích;
+  - `8441df8`: lỗi trình bày từ lần chạy 7;
+  - `97af80d`: E2E khi WooCommerce đổi hướng subscriber;
+  - commit tiếp theo: sửa QA báo nhầm và số rác từ lần chạy 9.
+- Lần chạy 9 FAIL là kết quả thật. Model viết một bài sai giá và bịa trải nghiệm, QA chặn đúng (dưới 70 → nháp gắn nhãn cần sửa). Ngưỡng 70 **không** bị nới. Phần báo nhầm của QA đã được sửa.
+- Kết quả CI và lần chạy model thật cho commit cuối cùng được ghi trong mô tả PR #1. Vì mẫu sinh ngẫu nhiên, một lần chạy sau có thể đạt hoặc không đạt: đó là đo chất lượng model, không phải lỗi phần mềm.
